@@ -58,7 +58,7 @@ const osThreadAttr_t AppController_attributes = {
 osThreadId_t AppEncoderHandle;
 const osThreadAttr_t AppEncoder_attributes = {
   .name = "AppEncoder",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for AppIMU */
@@ -123,16 +123,16 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  // /* creation of AppController */
+  /* creation of AppController */
   // AppControllerHandle = osThreadNew(AppControllerTask, NULL, &AppController_attributes);
 
-  // /* creation of AppEncoder */
+  /* creation of AppEncoder */
   AppEncoderHandle = osThreadNew(AppEncoderTask, NULL, &AppEncoder_attributes);
 
-  // /* creation of AppIMU */
+  /* creation of AppIMU */
   AppIMUHandle = osThreadNew(AppIMUTask, NULL, &AppIMU_attributes);
 
-  // /* creation of AppManager */
+  /* creation of AppManager */
   // AppManagerHandle = osThreadNew(AppManagerTask, NULL, &AppManager_attributes);
 
   /* creation of AppHearthbeat */
