@@ -6,6 +6,10 @@
 #include "cmsis_os2.h"
 #include "motor.h"
 
+#ifndef APP_DEBUG_ENABLED
+#define APP_DEBUG_ENABLED 1
+#endif
+
 // ROS PUBLISH TIME CONFIG
 #define TIME_ENCODER_PUBLISH_MS 20            //50 Hz    
 #define TIME_IMU_PUBLISH_MS 10                //100 Hz

@@ -8,6 +8,7 @@
 #include "wdg_app.h"
 #include "motor.h"
 #include "global.h"
+#include "app_debug.h"
 #include "app_tasks.h"
 
 
@@ -18,6 +19,7 @@ void AppHearthbeatTask(void *argument) {
     (void)argument;
     
     // io_buzzer_init();
+    wdg_app_init(1000);
     io_led_init();
     // imu_init(IMU_USE_DEBUG); //True is for debug mode
 
@@ -46,11 +48,11 @@ void AppHearthbeatTask(void *argument) {
 
     //micro_ros_app_init();
 
-    // printf("Application layer initialized\r\n");
+    APP_DEBUG_INFO("HEARTBEAT", "Application layer initialized");
 
     while (1) {
 
-        // printf("Application layer running\r\n");
+        APP_DEBUG_INFO("HEARTBEAT", "Application layer running");
 
         //micro_ros_app_run();
         

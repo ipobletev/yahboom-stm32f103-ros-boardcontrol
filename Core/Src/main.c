@@ -165,7 +165,11 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+// System call stubs for Newlib to use printf to output to the UART1
+int _write(int file, char *ptr, int len) {
+  HAL_UART_Transmit(&huart1, (uint8_t *)ptr, len, HAL_MAX_DELAY);
+  return len;
+}
 /* USER CODE END 4 */
 
 /**

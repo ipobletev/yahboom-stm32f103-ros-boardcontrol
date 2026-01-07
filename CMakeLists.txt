@@ -63,6 +63,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/Tasks/Inc
     App/SerialROS/Inc
     Drivers/BSP/serial_ros/Inc
+    App/Debug/Inc
 )
 
 # Add micro-ROS support source files
@@ -89,6 +90,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Main/Src/task_encoder.c
     App/SerialROS/Src/serial_ros.c
     Drivers/BSP/serial_ros/Src/bsp_serial_ros.c
+    App/Debug/Src/app_debug.c
 )
 
 # Add linked libraries
