@@ -1,6 +1,10 @@
 #STM32CubeIDE
 build
 
+# Python Scripts
+.venv
+__pycache__
+
 # Prerequisites
 *.d
 

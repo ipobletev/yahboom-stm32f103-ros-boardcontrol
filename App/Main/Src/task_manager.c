@@ -1,5 +1,6 @@
 #include "global.h"
 #include <stdio.h>
+#include "io_buzzer.h"
 #include "motor.h"
 #include "io_led.h"
 #include "serial_ros.h"
@@ -23,8 +24,6 @@ void StatePubTimerCallback(void *argument)
   };
   serial_ros_publish(TOPIC_PUB_MACHINE_INFO, (uint8_t*)&payload, sizeof(payload));
   
-  // Reset detection for next period
-  is_moving_detected = false;
 }
 
 void AppManagerTask(void *argument) {
@@ -38,22 +37,19 @@ void AppManagerTask(void *argument) {
     motor_init(&motor_bl, NULL, MOTOR_ID_3);
     motor_init(&motor_br, NULL, MOTOR_ID_4);
 
-    // Initialize and start state publisher timer (20Hz)
+    // Initialize and start state publisher timer
     state_pub_timer_id = osTimerNew(StatePubTimerCallback, osTimerPeriodic, NULL, NULL);
     if (state_pub_timer_id != NULL) {
         osTimerStart(state_pub_timer_id, TIME_CURRENT_STATE_PUBLISH_MS);
     }
-
-    set_system_state(STATE_TEMPORAL_STOP);
 
     while (1) {
         system_msg_t msg;
         // Wait for state change requests (0 timeout to allow periodic logic)
         osStatus_t status = osMessageQueueGet(system_msg_queue, &msg, NULL, 0);
 
-        if (status == osOK) {
-            // Set system state
-            set_system_state(msg.requested_state);
+        if (status != osOK) {
+            continue;
         }
 
         //Control logic
@@ -74,8 +70,6 @@ void AppManagerTask(void *argument) {
             default:
                 break;
         }
-
-
 
         osDelay(10); // Run control loop at 100Hz
     }
@@ -98,10 +92,9 @@ void state_moving(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor
     // Check last command to stop motors if timeout of last command
     uint32_t now = osKernelGetTickCount();
     if (current_state == STATE_MOVING && (now - last_cmd_tick > 500)) {
-        printf("[TaskManager] Command timeout! Stopping motors.\r\n");
+        // printf("[TaskManager] Command timeout! Stopping motors.\r\n");
         last_cmd.linear_x = 0;
         last_cmd.angular_z = 0;
-        set_system_state(STATE_IDLE);
     }
 
     float left = last_cmd.linear_x - last_cmd.angular_z;
@@ -117,9 +110,11 @@ void state_moving(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor
 }
 
 void state_emergency_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br) {
+    io_buzzer(10);
     motor_stop_all(true);
 }
 
 void state_temporal_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br) {
+    io_buzzer(100);
     motor_stop_all(true);
 }

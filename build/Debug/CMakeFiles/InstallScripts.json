@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"C:/GIT/sme/yahboom-stm32f103-ros-boardcontrol/build/Debug/cmake_install.cmake",
-		"C:/GIT/sme/yahboom-stm32f103-ros-boardcontrol/build/Debug/cmake/stm32cubemx/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

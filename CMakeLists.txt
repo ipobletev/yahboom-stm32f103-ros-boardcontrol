@@ -82,7 +82,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Watchdog/Src/wdg_app.c
     App/IO/Key/Src/io_key.c
     Drivers/BSP/key/Src/bsp_key.c
-    App/Main/Src/task_test.c
+    App/Main/Src/task_hearthbeat.c
     App/Main/Src/task_controller.c
     App/Main/Src/task_manager.c
     App/Main/Src/task_imu.c

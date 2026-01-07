@@ -84,7 +84,6 @@ typedef enum {
  * @brief System states for the application.
  */
 typedef enum {
-    STATE_INIT,
     STATE_IDLE,
     STATE_MOVING,
     STATE_TEMPORAL_STOP,
@@ -132,8 +131,5 @@ extern cmd_vel_t last_cmd;
 
 /* Shared motor instances */
 extern motor_t motor_fl, motor_fr, motor_bl, motor_br;
-
-/* Shared functions */
-void set_system_state(system_state_t new_state);
 
 #endif // APP_H

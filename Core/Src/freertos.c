@@ -75,6 +75,13 @@ const osThreadAttr_t AppManager_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for AppHearthbeat */
+osThreadId_t AppHearthbeatHandle;
+const osThreadAttr_t AppHearthbeat_attributes = {
+  .name = "AppHearthbeat",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -85,6 +92,7 @@ void AppControllerTask(void *argument);
 void AppEncoderTask(void *argument);
 void AppIMUTask(void *argument);
 void AppManagerTask(void *argument);
+void AppHearthbeatTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -126,6 +134,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of AppManager */
   AppManagerHandle = osThreadNew(AppManagerTask, NULL, &AppManager_attributes);
+
+  /* creation of AppHearthbeat */
+  AppHearthbeatHandle = osThreadNew(AppHearthbeatTask, NULL, &AppHearthbeat_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -207,6 +218,24 @@ __weak void AppManagerTask(void *argument)
     osDelay(1);
   }
   /* USER CODE END AppManagerTask */
+}
+
+/* USER CODE BEGIN Header_AppHearthbeatTask */
+/**
+* @brief Function implementing the AppHearthbeat thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_AppHearthbeatTask */
+__weak void AppHearthbeatTask(void *argument)
+{
+  /* USER CODE BEGIN AppHearthbeatTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END AppHearthbeatTask */
 }
 
 /* Private application code --------------------------------------------------*/

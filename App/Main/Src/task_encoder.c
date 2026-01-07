@@ -24,15 +24,15 @@ void AppEncoderTask(void *argument) {
         int32_t enc_data[4] = {enc_fl, enc_fr, enc_bl, enc_br};
         serial_ros_publish(TOPIC_PUB_ENCODER, enc_data, sizeof(enc_data));
         
-        // Status logging
-        static uint32_t last_log = 0;
-        uint32_t now = osKernelGetTickCount();
-        if (now - last_log >= TIME_LOG_DEBUG_ENCODER_MS) {
-            last_log = now;
+        // // Status logging
+        // static uint32_t last_log = 0;
+        // uint32_t now = osKernelGetTickCount();
+        // if (now - last_log >= TIME_LOG_DEBUG_ENCODER_MS) {
+        //     last_log = now;
 
-            printf("[TaskEncoder] FL:%ld FR:%ld BL:%ld BR:%ld\r\n", 
-                    (long)enc_fl, (long)enc_fr, (long)enc_bl, (long)enc_br);
-        }
+        //     printf("[TaskEncoder] FL:%ld FR:%ld BL:%ld BR:%ld\r\n", 
+        //             (long)enc_fl, (long)enc_fr, (long)enc_bl, (long)enc_br);
+        // }
 
         osDelay(TIME_ENCODER_UPDATE_MS);
     }
