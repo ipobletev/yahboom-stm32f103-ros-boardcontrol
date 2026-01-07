@@ -133,7 +133,7 @@ typedef struct {
 
 extern cmd_vel_t last_cmd;
 
-/* Shared motor instances */
-extern motor_t motor_fl, motor_fr, motor_bl, motor_br;
+// /* Shared motor instances */
+// extern motor_t motor_fl, motor_fr, motor_bl, motor_br;
 
 #endif // APP_H

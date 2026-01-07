@@ -1,5 +1,6 @@
 #include "io_buzzer.h"
 #include "FreeRTOS.h"
+#include "app_debug.h"
 #include "task.h"
 #include "bsp_buzzer.h"
 #include "cmsis_os2.h"
@@ -19,7 +20,7 @@ void io_buzzer_init(void) {
     // Create a single-shot timer for the buzzer
     buzzerTimerHandle = osTimerNew(buzzerTimerCallback, osTimerOnce, NULL, NULL);
     if (buzzerTimerHandle == NULL) {
-        printf("Failed to create buzzer timer\r\n");
+        APP_DEBUG_ERROR("IO_Buzzer", "Failed to create buzzer timer\r\n");
     }
 }
 

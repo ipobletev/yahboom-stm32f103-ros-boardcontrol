@@ -2,20 +2,26 @@
 #include "app_debug.h"
 #include "imu_app.h"
 #include <stdio.h>
+#include <string.h>
 #include "serial_ros.h"
 
 void AppIMUTask(void *argument) {
     (void)argument;
     
+    imu_data_t imu_raw;
+
     // Initialize IMU
     imu_init(IMU_USE_DEBUG);
 
     while (1) {
+
+        //clean
+        memset(&imu_raw, 0, sizeof(imu_data_t));
+
         // Update IMU and publish
         imu_update();
 
         // Publish IMU data
-        imu_data_t imu_raw;
         imu_get_data(&imu_raw);
         
         //serial_ros_publish(TOPIC_PUB_IMU, &imu_raw, sizeof(imu_data_t));

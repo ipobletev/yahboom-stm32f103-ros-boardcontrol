@@ -1,4 +1,5 @@
 #include "ak09916.h"
+#include "app_debug.h"
 #include <stdio.h>
 
 static raw_data_t g_raw_mag;
@@ -47,10 +48,10 @@ void AK09916_init(bool debug) {
     ICM20948_i2c_master_init();
 
     while(AK09916_read_reg(MAG_WIA2) != 0x09) {
-        if (g_debug) printf("Waiting for AK09916...\r\n");
+        if (g_debug) APP_DEBUG_INFO("AK09916", "Waiting for AK09916...\r\n");
         HAL_Delay(100);
     }
-    if (g_debug) printf("AK09916 Magnetometer detected!\r\n");
+    if (g_debug) APP_DEBUG_INFO("AK09916", "Magnetometer detected!\r\n");
 
     AK09916_write_reg(MAG_CNTL3, 0x01);
     HAL_Delay(100);

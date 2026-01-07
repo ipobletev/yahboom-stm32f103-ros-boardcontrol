@@ -1,5 +1,6 @@
 #include "global.h"
 #include <stdio.h>
+#include <string.h>
 #include "io_buzzer.h"
 #include "motor.h"
 #include "io_led.h"
@@ -29,7 +30,13 @@ void StatePubTimerCallback(void *argument)
 void AppManagerTask(void *argument) {
     (void)argument;
     
+    //Initialize motors
     motor_t motor_fl, motor_fr, motor_bl, motor_br;
+    //clean
+    memset(&motor_fl, 0, sizeof(motor_t));
+    memset(&motor_fr, 0, sizeof(motor_t));
+    memset(&motor_bl, 0, sizeof(motor_t));
+    memset(&motor_br, 0, sizeof(motor_t));
     
     // Initialize motors with default config
     motor_init(&motor_fl, NULL, MOTOR_ID_1);

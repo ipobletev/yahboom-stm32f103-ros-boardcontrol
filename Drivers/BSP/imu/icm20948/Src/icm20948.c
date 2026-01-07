@@ -1,4 +1,5 @@
 #include "icm20948.h"
+#include "app_debug.h"
 #include <stdio.h>
 
 static raw_data_t g_raw_accel;
@@ -134,12 +135,12 @@ void ICM20948_init(bool debug) {
     HAL_Delay(100);
     g_current_bank = ub_0; 
     
-    if (g_debug) printf("Checking ICM20948 WHO_AM_I...\r\n");
+    if (g_debug) APP_DEBUG_INFO("ICM20948", "Checking ICM20948 WHO_AM_I...\r\n");
     uint8_t id = ICM20948_read_single_reg(ub_0, B0_WHO_AM_I);
     if (id != 0xEA) {
-        if (g_debug) printf("ICM20948 WHO_AM_I failed: 0x%02X (expected 0xEA)\r\n", id);
+        if (g_debug) APP_DEBUG_ERROR("ICM20948", "WHO_AM_I failed: 0x%02X (expected 0xEA)\r\n", id);
     } else {
-        if (g_debug) printf("ICM20948 detected!\r\n");
+        if (g_debug) APP_DEBUG_INFO("ICM20948", "detected!\r\n");
     }
 
     ICM20948_wakeup();
