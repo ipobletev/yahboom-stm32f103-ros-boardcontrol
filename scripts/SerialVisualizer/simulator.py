@@ -18,8 +18,8 @@ def run_simulator(port="COM10"):
     while True:
         # 1. Send Machine Info (1Hz)
         if int(t * 10) % 10 == 0:
-            # state, mode, moving
-            payload = struct.pack("<IIB", random.randint(0, 2), random.randint(0, 1), random.randint(0, 1))
+            # state, mode, moving_w, moving_s (4 bytes)
+            payload = struct.pack("<BBBB", random.randint(0, 3), random.randint(0, 1), random.randint(0, 1), random.randint(0, 1))
             frame = protocol.pack(protocol.TOPIC_PUB_MACHINE_INFO, payload)
             ser.write(frame)
 

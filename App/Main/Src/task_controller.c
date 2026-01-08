@@ -1,3 +1,4 @@
+#include "app_debug.h"
 #include "bsp_serial_ros.h"
 #include "serial_ros.h"
 #include "global.h"
@@ -11,50 +12,70 @@ extern cmd_vel_t last_cmd;
 // Seriel Reception for ROS commands
 static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint8_t length) {
 
-    // 1. Process ROS velocity commands
-    if (topic_id == TOPIC_SUB_CMD_VEL && length == sizeof(cmd_vel_t)) {
-        // Only process ROS velocity commands if in AUTONOMOUS mode
-        if (current_mode == MODE_AUTONOMOUS) {
-            cmd_vel_t *cmd = (cmd_vel_t*)payload;
-            last_cmd = *cmd; // Update global command
-            last_cmd_tick = osKernelGetTickCount();
+    APP_DEBUG_INFO("CONTROLLER", "Received ROS frame: topic_id=%d, length=%d", topic_id, length);
 
-            if (current_state == STATE_IDLE && (cmd->linear_x != 0 || cmd->angular_z != 0)) {
-                system_msg_t msg = { 
-                    .requested_state = STATE_MOVING, 
-                    .timestamp = last_cmd_tick 
-                };
-                osMessageQueuePut(system_msg_queue, &msg, 0, 0);
+    switch (topic_id) {
+        case TOPIC_SUB_CMD_VEL:
+            if (length == sizeof(cmd_vel_t)) {
+                // Only process ROS velocity commands if in AUTONOMOUS mode
+                if (current_mode == MODE_AUTONOMOUS) {
+                    cmd_vel_t *cmd = (cmd_vel_t*)payload;
+                    last_cmd = *cmd; // Update global command
+                    last_cmd_tick = osKernelGetTickCount();
+
+                    if (current_state == STATE_IDLE && (cmd->linear_x != 0 || cmd->angular_z != 0)) {
+                        system_msg_t msg = { 
+                            .requested_state = STATE_MOVING, 
+                            .timestamp = last_cmd_tick 
+                        };
+                        osMessageQueuePut(system_msg_queue, &msg, 0, 0);
+                    }
+                }
             }
-        }
-    }
+            break;
 
-    // 2. Process ROS mode commands
-    else if (topic_id == TOPIC_SUB_OPERATION_MODE && length == 1) {
-        operation_mode_t new_mode = (operation_mode_t)payload[0];
-        if (new_mode == MODE_MANUAL || new_mode == MODE_AUTONOMOUS) {
-            current_mode = new_mode;
-            // Stop command when switching modes
-            last_cmd.linear_x = 0;
-            last_cmd.angular_z = 0;
-            
-            system_msg_t msg = { 
-                .requested_state = STATE_TEMPORAL_STOP, 
-                .timestamp = osKernelGetTickCount() 
-            };
-            osMessageQueuePut(system_msg_queue, &msg, 0, 0);
-        }
-    }
-    // 3. Process a Run device (to make ready to move or emergency stop)
-    else if (topic_id == TOPIC_SUB_OPERATION_RUN && length == 1) {
-        system_state_t target_state = (system_state_t)payload[0];
-        if (target_state == STATE_IDLE || target_state == STATE_EMERGENCY_STOP || target_state == STATE_TEMPORAL_STOP) {
-            system_msg_t msg = { 
-                .requested_state = target_state, 
-                .timestamp = osKernelGetTickCount() 
-            };
-            osMessageQueuePut(system_msg_queue, &msg, 0, 0);
-        }
+        case TOPIC_SUB_OPERATION_MODE:
+            if (length == 1) {
+                if (current_state == STATE_EMERGENCY_STOP) {
+                    APP_DEBUG_INFO("CONTROLLER", "Ignoring MODE command while in E-STOP");
+                    break;
+                }
+                operation_mode_t new_mode = (operation_mode_t)payload[0];
+                if (new_mode == MODE_MANUAL || new_mode == MODE_AUTONOMOUS) {
+                    current_mode = new_mode;
+                    // Stop command when switching modes
+                    last_cmd.linear_x = 0;
+                    last_cmd.angular_z = 0;
+                    
+                    system_msg_t msg = { 
+                        .requested_state = STATE_TEMPORAL_STOP, 
+                        .timestamp = osKernelGetTickCount() 
+                    };
+                    osMessageQueuePut(system_msg_queue, &msg, 0, 0);
+                }
+            }
+            break;
+
+        case TOPIC_SUB_OPERATION_RUN:
+            if (length == 1) {
+                if (current_state == STATE_EMERGENCY_STOP) {
+                    APP_DEBUG_INFO("CONTROLLER", "Ignoring RUN command while in E-STOP");
+                    break;
+                }
+                system_state_t target_state = (system_state_t)payload[0];
+                if (target_state == STATE_IDLE || target_state == STATE_EMERGENCY_STOP || target_state == STATE_TEMPORAL_STOP) {
+                    system_msg_t msg = { 
+                        .requested_state = target_state, 
+                        .timestamp = osKernelGetTickCount() 
+                    };
+                    osMessageQueuePut(system_msg_queue, &msg, 0, 0);
+                }
+            }
+            break;
+
+        default:
+            APP_DEBUG_INFO("CONTROLLER", "Unknown topic_id: %d", topic_id);
+            break;
     }
 }
 
@@ -70,6 +91,24 @@ void AppControllerTask(void *argument) {
     while (1) {
         // Update serial ROS (process incoming bytes)
         serial_ros_update();
+
+        uint32_t now = osKernelGetTickCount();
+        
+        // 0. Process command timeout
+        // If in moving state and last command is older than timeout, stop motors. Secure the system
+        if (current_state == STATE_MOVING) {
+            if (now - last_cmd_tick > TIMEOUT_LAST_CMD_MS) {
+                APP_DEBUG_INFO("CONTROLLER", "Command timeout! Stopping motors.");
+                last_cmd.linear_x = 0;
+                last_cmd.angular_z = 0;
+                system_msg_t msg = { 
+                    .requested_state = STATE_IDLE, 
+                    .timestamp = now 
+                };
+                osMessageQueuePut(system_msg_queue, &msg, 0, 0);
+            }
+        }
+
         system_msg_t msg;
         msg.timestamp = osKernelGetTickCount();
         bool send_msg = false;
@@ -77,12 +116,14 @@ void AppControllerTask(void *argument) {
         // 1. Process emergency stop
         //  MANUAL EMERGENCY STOP -> VIA HARDWARE BUTTON
         if (io_key_is_pressed() && current_state != STATE_EMERGENCY_STOP) {
+            APP_DEBUG_INFO("CONTROLLER", "Emergency stop! by button. Stopping motors.");
             msg.requested_state = STATE_EMERGENCY_STOP;
             send_msg = true;
         }
 
         // 2. Send message
         if (send_msg) {
+            APP_DEBUG_INFO("CONTROLLER", "Sending message to manager: %d", msg.requested_state);
             osMessageQueuePut(system_msg_queue, &msg, 0, 0);
         }
 

@@ -93,10 +93,9 @@ class SerialRosProtocol:
 # Data Structure Parsers
 def parse_machine_info(data):
     try:
-        # struct machine_info { enum (4), enum (4), bool (1), bool (1) }
-        # Min length 10 bytes.
-        if len(data) >= 10:
-            state, mode, wheels, spatial = struct.unpack("<IIBB", data[:10])
+        # struct machine_info { uint8_t, uint8_t, uint8_t, uint8_t } -> 4 bytes
+        if len(data) >= 4:
+            state, mode, wheels, spatial = struct.unpack("<BBBB", data[:4])
             return {
                 "state": state, 
                 "mode": mode, 

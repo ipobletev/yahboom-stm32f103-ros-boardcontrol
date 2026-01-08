@@ -6,7 +6,11 @@
 #include "cmsis_os2.h"
 #include "motor.h"
 
+// DEBUG CONFIG
 #define APP_DEBUG_ENABLED 0
+
+// TIMEOUT CONFIG FOR CMD VEL. If no new command is received for this time, the motors will stop
+#define TIMEOUT_LAST_CMD_MS 250
 
 // ROS PUBLISH TIME CONFIG
 #define TIME_ENCODER_PUBLISH_MS         1000              //20Hz    

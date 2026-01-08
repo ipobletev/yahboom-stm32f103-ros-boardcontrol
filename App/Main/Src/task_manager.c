@@ -16,6 +16,7 @@ void state_error(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_
 void state_temporal_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
 void state_emergency_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
 
+
 void StatePubTimerCallback(void *argument)
 {
   (void)argument;
@@ -149,14 +150,6 @@ void state_idle(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t
 }
 
 void state_moving(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br) {
-
-    // Check last command to stop motors if timeout of last command
-    uint32_t now = osKernelGetTickCount();
-    if (current_state == STATE_MOVING && (now - last_cmd_tick > 500)) {
-        // printf("[TaskManager] Command timeout! Stopping motors.\r\n");
-        last_cmd.linear_x = 0;
-        last_cmd.angular_z = 0;
-    }
 
     float left = last_cmd.linear_x - last_cmd.angular_z;
     float right = last_cmd.linear_x + last_cmd.angular_z;
