@@ -105,3 +105,16 @@ void serial_ros_publish(uint8_t topic_id, const void *payload, uint8_t length) {
         serial_ros_bsp_send(buffer, total_len);
     }
 }
+
+void serial_ros_update(void) {
+    uint8_t byte;
+    serial_ros_frame_t frame;
+    
+    while (serial_ros_bsp_read_byte(&byte)) {
+        if (serial_ros_unpack_byte(byte, &frame)) {
+            if (ros_callback != NULL) {
+                ros_callback(frame.topic_id, (const uint8_t*)frame.payload, frame.length);
+            }
+        }
+    }
+}

@@ -45,11 +45,12 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
             osMessageQueuePut(system_msg_queue, &msg, 0, 0);
         }
     }
-    // 3. Process a Run device (to make ready to move. STATE_IDLE)
+    // 3. Process a Run device (to make ready to move or emergency stop)
     else if (topic_id == TOPIC_SUB_OPERATION_RUN && length == 1) {
-        if (payload[0] == 0) {
+        system_state_t target_state = (system_state_t)payload[0];
+        if (target_state == STATE_IDLE || target_state == STATE_EMERGENCY_STOP || target_state == STATE_TEMPORAL_STOP) {
             system_msg_t msg = { 
-                .requested_state = STATE_IDLE, 
+                .requested_state = target_state, 
                 .timestamp = osKernelGetTickCount() 
             };
             osMessageQueuePut(system_msg_queue, &msg, 0, 0);
@@ -63,7 +64,12 @@ void AppControllerTask(void *argument) {
     // Register ROS callback for receive messages from serial ROS
     serial_ros_set_callback(on_ros_frame_received);
     
+    // Initialize serial ROS BSP (DMA reception)
+    serial_ros_bsp_init();
+    
     while (1) {
+        // Update serial ROS (process incoming bytes)
+        serial_ros_update();
         system_msg_t msg;
         msg.timestamp = osKernelGetTickCount();
         bool send_msg = false;

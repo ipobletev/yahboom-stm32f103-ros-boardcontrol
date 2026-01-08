@@ -135,4 +135,4 @@ def pack_cmd_vel(lx, ly, lz, az):
     return struct.pack("<4f", lx, ly, lz, az)
 
 def pack_enum(val):
-    return struct.pack("<I", val)
+    return struct.pack("B", val)

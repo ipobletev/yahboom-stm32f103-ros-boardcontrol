@@ -174,12 +174,20 @@ class SerialVisualizer(QMainWindow):
         
         # Mode/State Toggle
         mode_layout = QVBoxLayout()
+        btn_run = QPushButton("START / RUN")
+        btn_run.setStyleSheet("background-color: green; color: white; font-weight: bold;")
+        btn_run.clicked.connect(self.send_run_cmd)
         btn_toggle_mode = QPushButton("Toggle Mode (Manual/Auto)")
         btn_toggle_mode.clicked.connect(self.toggle_mode_cmd)
+        self.btn_reset_stop = QPushButton("RESET STOP")
+        self.btn_reset_stop.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
+        self.btn_reset_stop.clicked.connect(self.send_reset_stop)
         btn_estop = QPushButton("EMERGENCY STOP")
         btn_estop.setStyleSheet("background-color: red; color: white; font-weight: bold;")
         btn_estop.clicked.connect(self.send_estop)
+        mode_layout.addWidget(btn_run)
         mode_layout.addWidget(btn_toggle_mode)
+        mode_layout.addWidget(self.btn_reset_stop)
         mode_layout.addWidget(btn_estop)
         ctrl_main_layout.addLayout(mode_layout)
 
@@ -346,7 +354,24 @@ class SerialVisualizer(QMainWindow):
     def send_estop(self):
         if not self.serial_port or not self.serial_port.is_open:
             return
+        # Values matching system_state_t in global.h: STATE_EMERGENCY_STOP = 3
         data = pack_enum(3)
+        frame = self.protocol.pack(self.protocol.TOPIC_SUB_OPERATION_RUN, data)
+        self.serial_port.write(frame)
+
+    def send_run_cmd(self):
+        if (not self.serial_port or not self.serial_port.is_open):
+            return
+        # Values matching system_state_t in global.h: STATE_IDLE = 0
+        data = pack_enum(0)
+        frame = self.protocol.pack(self.protocol.TOPIC_SUB_OPERATION_RUN, data)
+        self.serial_port.write(frame)
+
+    def send_reset_stop(self):
+        if (not self.serial_port or not self.serial_port.is_open):
+            return
+        # Values matching system_state_t in global.h: STATE_TEMPORAL_STOP = 2
+        data = pack_enum(2)
         frame = self.protocol.pack(self.protocol.TOPIC_SUB_OPERATION_RUN, data)
         self.serial_port.write(frame)
 

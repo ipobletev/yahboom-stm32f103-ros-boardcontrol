@@ -9,8 +9,8 @@
 #define APP_DEBUG_ENABLED 0
 
 // ROS PUBLISH TIME CONFIG
-#define TIME_ENCODER_PUBLISH_MS         50              //20Hz    
-#define TIME_IMU_PUBLISH_MS             100            //100Hz
+#define TIME_ENCODER_PUBLISH_MS         1000              //20Hz    
+#define TIME_IMU_PUBLISH_MS             1000            //100Hz
 #define TIME_MACHINE_INFO_PUBLISH_MS    1000           //1s
 
 // LOG DEBUG FOR PUBLISH
