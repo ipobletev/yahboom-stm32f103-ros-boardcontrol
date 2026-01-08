@@ -16,6 +16,7 @@ from gui.tabs.raw_data_tab import RawDataTab
 from gui.tabs.graphs_tab import GraphsTab
 from gui.tabs.status_tab import StatusTab
 from gui.tabs.view_3d_tab import View3DTab
+from gui.tabs.connection_tab import ConnectionTab
 
 class SerialVisualizerWindow(QMainWindow):
     def __init__(self):
@@ -106,11 +107,13 @@ class SerialVisualizerWindow(QMainWindow):
         self.graphs_tab = GraphsTab()
         self.status_tab = StatusTab(self.sys_errors)
         self.view_3d_tab = View3DTab()
+        self.conn_tab = ConnectionTab()
         
         self.tabs.addTab(self.raw_tab, "Raw Data")
         self.tabs.addTab(self.graphs_tab, "Graphs")
         self.tabs.addTab(self.status_tab, "System Status")
         self.tabs.addTab(self.view_3d_tab, "3D Orientation")
+        self.tabs.addTab(self.conn_tab, "Connection Freq")
         
         main_layout.addWidget(self.tabs)
 
@@ -135,6 +138,7 @@ class SerialVisualizerWindow(QMainWindow):
         # Stats
         if topic_id not in self.topic_stats: self.topic_stats[topic_id] = {"count": 0, "freq": 0}
         self.topic_stats[topic_id]["count"] += 1
+        self.conn_tab.update_frame(topic_id)
 
         if topic_id == self.serial_manager.protocol.TOPIC_PUB_MACHINE_INFO:
             self.last_machine_info_time = time.time()
@@ -215,6 +219,7 @@ class SerialVisualizerWindow(QMainWindow):
                 info["count"] = 0
                 freqs[tid] = freq
             self.raw_tab.set_freqs(freqs)
+            self.conn_tab.update_freqs(freqs)
         self.last_stats_time = now
         
         # Watchdog
@@ -227,6 +232,7 @@ class SerialVisualizerWindow(QMainWindow):
     def reset_ui(self):
         self.raw_tab.reset_placeholders()
         self.status_tab.reset_placeholders()
+        self.conn_tab.reset_placeholders()
 
     # Commands
     def send_velocity(self, lx, az):
