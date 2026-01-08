@@ -19,3 +19,4 @@ bool is_moving_wheels = false;
 bool is_moving_spatial = false;
 uint32_t last_cmd_tick = 0;
 cmd_vel_t last_cmd = {0};
+uint32_t last_conn_ack_tick = 0;

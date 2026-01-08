@@ -14,6 +14,7 @@ class SerialProtocol:
     TOPIC_SUB_OPERATION_RUN = 0x06
     TOPIC_SUB_RESET_STOP_CMD = 0x07
     TOPIC_SUB_ESTOP_CMD = 0x08
+    TOPIC_SUB_CONFIRM_CONN = 0x0A
 
     # States for unpacking
     STATE_WAIT_H1 = 0

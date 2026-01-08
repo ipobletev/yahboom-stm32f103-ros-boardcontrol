@@ -65,6 +65,7 @@ extern operation_mode_t current_mode;
 extern bool is_moving_wheels;
 extern bool is_moving_spatial;
 extern uint32_t last_cmd_tick;
+extern uint32_t last_conn_ack_tick;
 
 typedef struct {
     float linear_x;

@@ -44,6 +44,10 @@ class SerialVisualizerWindow(QMainWindow):
         self.playback_timer.timeout.connect(self.update_playback)
         self.playback_interval = 50 # ms
 
+        # Heartbeat timer (2s)
+        self.heartbeat_timer = QTimer()
+        self.heartbeat_timer.timeout.connect(self.send_heartbeat)
+
         # Error mapping
         self.sys_errors = {
             (1 << 0): "IMU Init Error",
@@ -115,7 +119,8 @@ class SerialVisualizerWindow(QMainWindow):
         
         # Raw Tab Signals
         self.raw_tab.velocity_sent.connect(self.send_velocity)
-        self.raw_tab.mode_toggle_requested.connect(self.toggle_mode)
+        self.raw_tab.mode_manual_requested.connect(self.set_mode_manual)
+        self.raw_tab.mode_auto_requested.connect(self.set_mode_auto)
         self.raw_tab.run_requested.connect(self.send_run)
         self.raw_tab.estop_requested.connect(self.send_estop)
         self.raw_tab.reset_stop_requested.connect(self.send_reset_stop)
@@ -182,8 +187,10 @@ class SerialVisualizerWindow(QMainWindow):
             baud = int(self.baud_combo.currentText())
             if self.serial_manager.connect(port, baud):
                 self.connect_btn.setText("Disconnect")
+                self.heartbeat_timer.start(2000)
         else:
             self.serial_manager.disconnect()
+            self.heartbeat_timer.stop()
             self.connect_btn.setText("Connect")
             self.board_connected = False
             self.lbl_conn_status.setText("○ Disconnected")
@@ -213,8 +220,8 @@ class SerialVisualizerWindow(QMainWindow):
         # Watchdog
         if self.board_connected and (now - self.last_machine_info_time > 2.5):
             self.board_connected = False
-            self.lbl_conn_status.setText("○ High Latency / Disconnected")
-            self.lbl_conn_status.setStyleSheet("color: orange; font-weight: bold; margin-left: 20px;")
+            self.lbl_conn_status.setText("○ Disconnected")
+            self.lbl_conn_status.setStyleSheet("color: red; font-weight: bold; margin-left: 20px;")
             self.reset_ui()
 
     def reset_ui(self):
@@ -225,9 +232,11 @@ class SerialVisualizerWindow(QMainWindow):
     def send_velocity(self, lx, az):
         self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_CMD_VEL, pack_cmd_vel(lx, 0, 0, az))
 
-    def toggle_mode(self):
-        curr_mode = 1 if self.raw_tab.lbl_mode.text() == "MANUAL" else 0
-        self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_OPERATION_MODE, pack_enum(1 - curr_mode))
+    def set_mode_manual(self):
+        self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_OPERATION_MODE, pack_enum(0)) # MODE_MANUAL
+
+    def set_mode_auto(self):
+        self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_OPERATION_MODE, pack_enum(1)) # MODE_AUTONOMOUS
 
     def send_run(self):
         self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_OPERATION_RUN, pack_enum(0))
@@ -237,6 +246,11 @@ class SerialVisualizerWindow(QMainWindow):
 
     def send_reset_stop(self):
         self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_RESET_STOP_CMD, pack_enum(2))
+
+    def send_heartbeat(self):
+        if self.serial_manager.is_connected():
+            # Send an empty byte to confirm connection
+            self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_CONFIRM_CONN, pack_enum(0))
 
     # Recording
     def toggle_recording(self, active):

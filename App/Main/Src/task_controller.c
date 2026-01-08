@@ -25,9 +25,15 @@ extern cmd_vel_t last_cmd;
 // Seriel Reception for ROS commands
 static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint8_t length) {
 
-    APP_DEBUG_INFO("CONTROLLER", "Received ROS frame: topic_id=%d, length=%d", topic_id, length);
+    APP_DEBUG_INFO("RECEIVER", "Received ROS frame: topic_id=%d, length=%d", topic_id, length);
 
     switch (topic_id) {
+        case TOPIC_SUB_CONFIRM_CONN:
+            // Connection ACK explicitly received
+            last_conn_ack_tick = osKernelGetTickCount();
+            global_system_error &= ~SYS_ERROR_SERIAL_TIMEOUT;
+            APP_DEBUG_INFO("RECEIVER", "Connection ACK received");
+            break;
         case TOPIC_SUB_CMD_VEL:
             end_by_emergency_stop();
             end_by_manual_mode();
@@ -84,6 +90,8 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
 
         case TOPIC_SUB_RESET_STOP_CMD:
             if (length == 1) {
+                last_conn_ack_tick = osKernelGetTickCount();
+                global_system_error &= ~SYS_ERROR_SERIAL_TIMEOUT;
                 system_msg_t msg = { 
                     .requested_state = STATE_TEMPORAL_STOP, 
                     .timestamp = osKernelGetTickCount() 
@@ -105,7 +113,7 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
             break;
 
         default:
-            APP_DEBUG_INFO("CONTROLLER", "Unknown topic_id: %d", topic_id);
+            APP_DEBUG_INFO("RECEIVER", "Unknown topic_id: %d", topic_id);
             break;
     }
 }
@@ -140,11 +148,17 @@ void AppControllerTask(void *argument) {
             }
         }
 
+        // 1. Check connection timeout with PC
+        if (now - last_conn_ack_tick > CONN_TIMEOUT_MS && current_state != STATE_EMERGENCY_STOP) {
+            APP_DEBUG_ERROR("CONTROLLER", "Connection lost! Triggering E-STOP.");
+            global_system_error |= SYS_ERROR_SERIAL_TIMEOUT;
+        }
+
         system_msg_t msg;
         msg.timestamp = osKernelGetTickCount();
         bool send_msg = false;
 
-        // 1. Process emergency stop
+        // 2. Process emergency stop
         //  MANUAL EMERGENCY STOP -> VIA HARDWARE BUTTON
         if (io_key_is_pressed() && current_state != STATE_EMERGENCY_STOP) {
             APP_DEBUG_INFO("CONTROLLER", "Emergency stop! by button. Stopping motors.");
@@ -154,7 +168,7 @@ void AppControllerTask(void *argument) {
         }
 
         #ifdef APP_USE_HARDWARE_ERROR
-        // 2. Process hardware errors
+        // 3. Process hardware errors
         if (global_system_error != SYS_ERROR_NONE && current_state != STATE_EMERGENCY_STOP) {
             APP_DEBUG_ERROR("CONTROLLER", "Hardware error detected: 0x%08lX! Triggering E-STOP.", global_system_error);
             msg.requested_state = STATE_EMERGENCY_STOP;
@@ -162,7 +176,7 @@ void AppControllerTask(void *argument) {
         }
         #endif
 
-        // 3. Send message
+        // 4. Send message
         if (send_msg) {
             APP_DEBUG_INFO("CONTROLLER", "Sending message to manager: %d", msg.requested_state);
             osMessageQueuePut(system_msg_queue, &msg, 0, 0);
