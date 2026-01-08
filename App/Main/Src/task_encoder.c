@@ -1,5 +1,6 @@
 #include "app_debug.h"
 #include "global.h"
+#include "task_encoder.h"
 #include <stdio.h>
 #include <string.h>
 #include "serial_ros.h"
@@ -22,6 +23,11 @@ void AppEncoderTask(void *argument) {
         int32_t _enc_fr = motor_get_encoder(&_motor_fr);
         int32_t _enc_bl = motor_get_encoder(&_motor_bl);
         int32_t _enc_br = motor_get_encoder(&_motor_br);
+        // fake encoders
+        _enc_fl += 1;
+        _enc_fr += 1;
+        _enc_bl += 1;
+        _enc_br += 1;
 
         // Publish encoders
         int32_t enc_data[4] = {_enc_fl, _enc_fr, _enc_bl, _enc_br};
@@ -34,7 +40,7 @@ void AppEncoderTask(void *argument) {
             _last_log = _now;
             APP_DEBUG_INFO("ENCODER", "FL:%ld FR:%ld BL:%ld BR:%ld\r\n",
                 (long)_enc_fl, (long)_enc_fr, (long)_enc_bl, (long)_enc_br);
-            }
+        }
 
         osDelay(TIME_ENCODER_PUBLISH_MS);
     }

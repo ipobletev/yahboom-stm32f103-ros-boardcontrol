@@ -35,6 +35,15 @@ class SerialVisualizer(QMainWindow):
         }
         self.encoder_data = [np.zeros(self.max_points) for _ in range(4)]
 
+        # Topic statistics
+        self.topic_stats = {
+            self.protocol.TOPIC_PUB_MACHINE_INFO: {"name": "MACHINE_INFO", "count": 0, "freq": 0.0},
+            self.protocol.TOPIC_PUB_IMU: {"name": "IMU", "count": 0, "freq": 0.0},
+            self.protocol.TOPIC_PUB_ENCODER: {"name": "ENCODER", "count": 0, "freq": 0.0}
+        }
+        self.last_stats_time = time.time()
+        self.lbl_topic_freqs = {}
+
         self.setup_ui()
         
         self.data_received.connect(self.handle_data)
@@ -43,6 +52,12 @@ class SerialVisualizer(QMainWindow):
         self.port_timer = QTimer()
         self.port_timer.timeout.connect(self.update_ports)
         self.port_timer.start(2000)
+        
+        # Timer to update topic stats frequency
+        self.stats_timer = QTimer()
+        self.stats_timer.timeout.connect(self.refresh_topic_stats)
+        self.stats_timer.start(1000)
+        
         self.update_ports()
 
     def setup_ui(self):
@@ -86,13 +101,21 @@ class SerialVisualizer(QMainWindow):
         info_grid = QGridLayout(info_group)
         self.lbl_state = QLabel("IDLE")
         self.lbl_mode = QLabel("MANUAL")
-        self.lbl_moving = QLabel("NO")
+        self.lbl_moving_wheels = QLabel("NO")
+        self.lbl_moving_spatial = QLabel("NO")
         info_grid.addWidget(QLabel("State:"), 0, 0)
         info_grid.addWidget(self.lbl_state, 0, 1)
         info_grid.addWidget(QLabel("Mode:"), 1, 0)
         info_grid.addWidget(self.lbl_mode, 1, 1)
-        info_grid.addWidget(QLabel("Moving:"), 2, 0)
-        info_grid.addWidget(self.lbl_moving, 2, 1)
+        info_grid.addWidget(QLabel("Moving (Wheels):"), 2, 0)
+        info_grid.addWidget(self.lbl_moving_wheels, 2, 1)
+        info_grid.addWidget(QLabel("Moving (Spatial):"), 3, 0)
+        info_grid.addWidget(self.lbl_moving_spatial, 3, 1)
+        
+        self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO] = QLabel("0.0 Hz")
+        info_grid.addWidget(QLabel("<b>Freq:</b>"), 4, 0)
+        info_grid.addWidget(self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO], 4, 1)
+        
         dash_layout.addWidget(info_group)
 
         # Encoders
@@ -103,6 +126,11 @@ class SerialVisualizer(QMainWindow):
         for i in range(4):
             enc_grid.addWidget(QLabel(labels[i]), i // 2, (i % 2) * 2)
             enc_grid.addWidget(self.lbl_encs[i], i // 2, (i % 2) * 2 + 1)
+        
+        self.lbl_topic_freqs[self.protocol.TOPIC_PUB_ENCODER] = QLabel("0.0 Hz")
+        enc_grid.addWidget(QLabel("<b>Freq:</b>"), 2, 0)
+        enc_grid.addWidget(self.lbl_topic_freqs[self.protocol.TOPIC_PUB_ENCODER], 2, 1)
+        
         dash_layout.addWidget(enc_group)
         
         layout.addLayout(dash_layout)
@@ -122,6 +150,10 @@ class SerialVisualizer(QMainWindow):
         
         imu_grid.addWidget(QLabel("Magnetometer (X,Y,Z):"), 2, 0)
         for i in range(3): imu_grid.addWidget(self.lbl_mag[i], 2, i+1)
+        
+        self.lbl_topic_freqs[self.protocol.TOPIC_PUB_IMU] = QLabel("0.0 Hz")
+        imu_grid.addWidget(QLabel("<b>Freq:</b>"), 3, 0)
+        imu_grid.addWidget(self.lbl_topic_freqs[self.protocol.TOPIC_PUB_IMU], 3, 1)
         
         layout.addWidget(imu_group)
 
@@ -236,6 +268,14 @@ class SerialVisualizer(QMainWindow):
 
     @Slot(int, bytes)
     def handle_data(self, topic_id, payload):
+        # Update statistics
+        if topic_id in self.topic_stats:
+            self.topic_stats[topic_id]["count"] += 1
+        else:
+            # Handle unknown topics
+            self.topic_stats[topic_id] = {"name": f"UNKNOWN_0X{topic_id:02X}", "count": 1, "freq": 0.0}
+            # Note: The UI might not show this new topic until manual refresh or dynamic UI update implementation
+
         if topic_id == self.protocol.TOPIC_PUB_MACHINE_INFO:
             info = parse_machine_info(payload)
             if info:
@@ -243,7 +283,12 @@ class SerialVisualizer(QMainWindow):
                 modes = ["MANUAL", "AUTONOMOUS"]
                 self.lbl_state.setText(states[info["state"]] if info["state"] < len(states) else str(info["state"]))
                 self.lbl_mode.setText(modes[info["mode"]] if info["mode"] < len(modes) else str(info["mode"]))
-                self.lbl_moving.setText("YES" if info["moving"] else "NO")
+                self.lbl_moving_wheels.setText("YES" if info["moving_wheels"] else "NO")
+                self.lbl_moving_spatial.setText("YES" if info["moving_spatial"] else "NO")
+                
+                # Style colors for easier visualization
+                self.lbl_moving_wheels.setStyleSheet("color: lime; font-weight: bold;" if info["moving_wheels"] else "color: gray;")
+                self.lbl_moving_spatial.setStyleSheet("color: orange; font-weight: bold;" if info["moving_spatial"] else "color: gray;")
                 if info["state"] == 3: # E_STOP
                     self.lbl_state.setStyleSheet("color: red; font-weight: bold;")
                 else:
@@ -304,6 +349,20 @@ class SerialVisualizer(QMainWindow):
         data = pack_enum(3)
         frame = self.protocol.pack(self.protocol.TOPIC_SUB_OPERATION_RUN, data)
         self.serial_port.write(frame)
+
+    def refresh_topic_stats(self):
+        now = time.time()
+        dt = now - self.last_stats_time
+        if dt <= 0: return
+
+        for tid, info in self.topic_stats.items():
+            freq = info["count"] / dt
+            info["freq"] = freq
+            info["count"] = 0
+            if tid in self.lbl_topic_freqs:
+                self.lbl_topic_freqs[tid].setText(f"{freq:.2f} Hz")
+        
+        self.last_stats_time = now
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

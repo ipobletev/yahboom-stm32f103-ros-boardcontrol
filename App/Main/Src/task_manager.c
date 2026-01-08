@@ -1,4 +1,5 @@
 #include "app_debug.h"
+#include "task_manager.h"
 #include "global.h"
 #include <stdio.h>
 #include <string.h>
@@ -22,11 +23,13 @@ void StatePubTimerCallback(void *argument)
   machine_info_t payload = {
     .state = current_state,
     .mode = current_mode,
-    .is_moving_detected = is_moving_detected
+    .is_moving_wheels = is_moving_wheels,
+    .is_moving_spatial = is_moving_spatial
   };
   serial_ros_publish(TOPIC_PUB_MACHINE_INFO, (uint8_t*)&payload, sizeof(payload));
   
-  APP_DEBUG_INFO("MANAGER", "State: %d, Mode: %d, Moving: %d\r\n", payload.state, payload.mode, payload.is_moving_detected);
+  APP_DEBUG_INFO("MANAGER", "State: %d, Mode: %d, Moving (W:%d, S:%d)\r\n", 
+          payload.state, payload.mode, payload.is_moving_wheels, payload.is_moving_spatial);
 
 }
 
@@ -165,6 +168,7 @@ void state_moving(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor
     motor_update(motor_fr);
     motor_update(motor_bl);
     motor_update(motor_br);
+    
 }
 
 void state_emergency_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br) {

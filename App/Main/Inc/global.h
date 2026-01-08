@@ -75,6 +75,12 @@
 #define TOPIC_SUB_OPERATION_MODE    0x05
 #define TOPIC_SUB_OPERATION_RUN     0x06
 
+// MOTION CONFIG
+#define MOTION_FREQ_MS 50
+#define ENCODER_THRESHOLD 1
+#define GYRO_THRESHOLD 0.05f
+#define ACCEL_THRESHOLD 0.1f
+
 /**
  * @brief Operation modes for the application.
  */
@@ -107,7 +113,8 @@ typedef struct {
 typedef struct {
     system_state_t state;
     operation_mode_t mode;
-    bool is_moving_detected;
+    bool is_moving_wheels;
+    bool is_moving_spatial;
     //future implementation
         //inclination
         //velocity
@@ -120,7 +127,8 @@ typedef struct {
 extern osMessageQueueId_t system_msg_queue;
 extern system_state_t current_state;
 extern operation_mode_t current_mode;
-extern bool is_moving_detected;
+extern bool is_moving_wheels;
+extern bool is_moving_spatial;
 extern uint32_t last_cmd_tick;
 
 typedef struct {

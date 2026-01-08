@@ -1,4 +1,5 @@
 #include "global.h"
+#include "task_imu.h"
 #include "app_debug.h"
 #include "imu_app.h"
 #include <stdio.h>

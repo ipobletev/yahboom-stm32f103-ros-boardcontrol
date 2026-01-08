@@ -1,6 +1,7 @@
 #include "bsp_serial_ros.h"
 #include "serial_ros.h"
 #include "global.h"
+#include "task_controller.h"
 #include "io_key.h"
 #include "io_buzzer.h"
 #include <stdio.h>

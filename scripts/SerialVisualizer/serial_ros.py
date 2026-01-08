@@ -92,14 +92,17 @@ class SerialRosProtocol:
 
 # Data Structure Parsers
 def parse_machine_info(data):
-    # struct machine_info { enum (4), enum (4), bool (1) } -> padded to 12?
-    # Let's assume 4, 4, 1 and potential padding. 
-    # Global.h: system_state_t (int), operation_mode_t (int), bool
     try:
-        # Using 'IIB' (4, 4, 1) and checking length
-        if len(data) >= 9:
-            state, mode, moving = struct.unpack("<IIB", data[:9])
-            return {"state": state, "mode": mode, "moving": bool(moving)}
+        # struct machine_info { enum (4), enum (4), bool (1), bool (1) }
+        # Min length 10 bytes.
+        if len(data) >= 10:
+            state, mode, wheels, spatial = struct.unpack("<IIBB", data[:10])
+            return {
+                "state": state, 
+                "mode": mode, 
+                "moving_wheels": bool(wheels),
+                "moving_spatial": bool(spatial)
+            }
     except:
         pass
     return None

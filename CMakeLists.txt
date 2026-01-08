@@ -22,7 +22,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Set the project name
-set(CMAKE_PROJECT_NAME stm32f103-micro-ros)
+set(CMAKE_PROJECT_NAME yahboom-stm32f103-ros-boardcontrol)
 
 # Enable compile command to ease indexing with e.g. clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
@@ -41,9 +41,8 @@ add_executable(${CMAKE_PROJECT_NAME})
 add_subdirectory(cmake/stm32cubemx)
 
 # Link directories setup
-# Add micro-ROS include paths
+# include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    Middlewares/Third_Party/micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroros/include
     App/Main/Inc
     App/PID/Inc
     App/Motor/Inc
@@ -59,14 +58,13 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/Watchdog/Inc
     App/IO/Key/Inc
     Drivers/BSP/key/Inc
-    Drivers/BSP/microros/Inc
     App/Tasks/Inc
     App/SerialROS/Inc
     Drivers/BSP/serial_ros/Inc
     App/Debug/Inc
 )
 
-# Add micro-ROS support source files
+# Add source files
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Main/Src/global.c
     App/Motor/Src/motor.c

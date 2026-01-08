@@ -1,4 +1,5 @@
 #include "cmsis_os2.h"
+#include "task_hearthbeat.h"
 #include "global.h"
 #include <stdio.h>
 #include "io_buzzer.h"
