@@ -97,8 +97,8 @@ void AppManagerTask(void *argument) {
     // Initialize and start state publisher timer
     state_pub_timer_id = osTimerNew(StatePubTimerCallback, osTimerPeriodic, NULL, NULL);
     if (state_pub_timer_id != NULL) {
-        osTimerStart(state_pub_timer_id, TIME_CURRENT_STATE_PUBLISH_MS);
-        APP_DEBUG_INFO("MANAGER", "State publisher timer started (%d ms)", TIME_CURRENT_STATE_PUBLISH_MS);
+        osTimerStart(state_pub_timer_id, TIME_MACHINE_INFO_PUBLISH_MS);
+        APP_DEBUG_INFO("MANAGER", "State publisher timer started (%d ms)", TIME_MACHINE_INFO_PUBLISH_MS);
     } else {
         APP_DEBUG_ERROR("MANAGER", "Failed to create state publisher timer");
     }
