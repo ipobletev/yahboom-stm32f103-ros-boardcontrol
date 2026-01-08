@@ -263,8 +263,9 @@ class SerialVisualizer(QMainWindow):
         layout.addWidget(imu_group)
 
         # Control Row
-        ctrl_group = QGroupBox("Control")
-        ctrl_main_layout = QHBoxLayout(ctrl_group)
+        # Control Row
+        self.ctrl_group = QGroupBox("Control")
+        ctrl_main_layout = QHBoxLayout(self.ctrl_group)
         
         # Velocity Control
         vel_layout = QGridLayout()
@@ -295,11 +296,11 @@ class SerialVisualizer(QMainWindow):
         mode_layout.addWidget(self.btn_reset_stop)
         mode_layout.addWidget(btn_estop)
         ctrl_main_layout.addLayout(mode_layout)
-        layout.addWidget(ctrl_group)
+        layout.addWidget(self.ctrl_group)
 
         # Recording Control
-        rec_group = QGroupBox("Data Recording")
-        rec_layout = QHBoxLayout(rec_group) # horizontal for record button + info
+        self.rec_group = QGroupBox("Data Recording")
+        rec_layout = QHBoxLayout(self.rec_group) # horizontal for record button + info
         self.btn_toggle_rec = QPushButton("Start Recording")
         self.btn_toggle_rec.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
         self.btn_toggle_rec.clicked.connect(self.toggle_recording)
@@ -313,7 +314,7 @@ class SerialVisualizer(QMainWindow):
         rec_layout.addWidget(self.btn_toggle_rec)
         rec_layout.addLayout(info_rec_layout)
         
-        layout.addWidget(rec_group)
+        layout.addWidget(self.rec_group)
 
         # Playback Control
         play_group = QGroupBox("Data Playback")
@@ -670,6 +671,36 @@ class SerialVisualizer(QMainWindow):
             self.lbl_gyro[i].setText(f"{self.current_data_cache.get('gyro_x' if i==0 else 'gyro_y' if i==1 else 'gyro_z', 0):.2f}")
             self.lbl_mag[i].setText(f"{self.current_data_cache.get('mag_x' if i==0 else 'mag_y' if i==1 else 'mag_z', 0):.2f}")
 
+    def update_graphs(self):
+        # Update Acc/Gyro/Mag from current_data_cache
+        ax = self.current_data_cache.get("acc_x", 0)
+        ay = self.current_data_cache.get("acc_y", 0)
+        az = self.current_data_cache.get("acc_z", 0)
+        gx = self.current_data_cache.get("gyro_x", 0)
+        gy = self.current_data_cache.get("gyro_y", 0)
+        gz = self.current_data_cache.get("gyro_z", 0)
+        mx = self.current_data_cache.get("mag_x", 0)
+        my = self.current_data_cache.get("mag_y", 0)
+        mz = self.current_data_cache.get("mag_z", 0)
+        
+        # Helper to update arrays
+        for arr, val in [(self.imu_data["acc"], [ax, ay, az]),
+                         (self.imu_data["gyro"], [gx, gy, gz]),
+                         (self.imu_data["mag"], [mx, my, mz])]:
+            for i in range(3):
+                arr[i] = np.roll(arr[i], -1)
+                arr[i][-1] = val[i]
+                
+        # Helper to update curves
+        for i in range(3):
+            self.acc_curves[i].setData(self.imu_data["acc"][i])
+            self.gyro_curves[i].setData(self.imu_data["gyro"][i])
+            self.mag_curves[i].setData(self.imu_data["mag"][i])
+            
+            self.lbl_acc[i].setText(f"{self.current_data_cache.get('acc_x' if i==0 else 'acc_y' if i==1 else 'acc_z', 0):.2f}")
+            self.lbl_gyro[i].setText(f"{self.current_data_cache.get('gyro_x' if i==0 else 'gyro_y' if i==1 else 'gyro_z', 0):.2f}")
+            self.lbl_mag[i].setText(f"{self.current_data_cache.get('mag_x' if i==0 else 'mag_y' if i==1 else 'mag_z', 0):.2f}")
+
     def load_csv_playback(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open CSV Recording", "", "CSV Files (*.csv)")
         if filename:
@@ -709,6 +740,11 @@ class SerialVisualizer(QMainWindow):
             self.btn_play_pause.setText("Pause")
             self.playback_timer.start(self.playback_interval)
             
+            # Disable other controls
+            self.ctrl_group.setEnabled(False)
+            self.rec_group.setEnabled(False)
+            self.connect_btn.setEnabled(False)
+            
             # If start from beginning
             if self.playback_index >= len(self.playback_data):
                 self.playback_index = 0
@@ -716,6 +752,11 @@ class SerialVisualizer(QMainWindow):
             self.is_playing = False
             self.btn_play_pause.setText("Play")
             self.playback_timer.stop()
+            
+            # Enable controls
+            self.ctrl_group.setEnabled(True)
+            self.rec_group.setEnabled(True)
+            self.connect_btn.setEnabled(True)
 
     def update_playback(self):
         if not self.playback_data:
