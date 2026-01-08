@@ -18,8 +18,8 @@ static int16_t motor_limit_speed(int16_t pulse) {
     return pulse;
 }
 
-void motor_init(motor_t *motor, const motor_config_t *config, app_motor_id_t id) {
-    if (motor == NULL) return;
+bool motor_init(motor_t *motor, const motor_config_t *config, app_motor_id_t id) {
+    if (motor == NULL) return false;
 
     static bool bsp_initialized = false;
     if (!bsp_initialized) {
@@ -34,10 +34,12 @@ void motor_init(motor_t *motor, const motor_config_t *config, app_motor_id_t id)
         pid_init(&motor->pid, config->pid.kp, config->pid.ki, config->pid.kd, config->pid.max_output, config->pid.min_output);
     } else {
         printf("[Motor] ERROR: Invalid motor config for motor %d\r\n", id);
+        return false;
     }
     
     motor->last_encoder = 0;
     motor->target_speed = 0;
+    return true;
 }
 
 void motor_set_speed(motor_t *motor, int16_t speed) {

@@ -12,16 +12,37 @@ void AppIMUTask(void *argument) {
     imu_data_t imu_raw;
 
     // Initialize IMU
-    imu_init(IMU_USE_DEBUG);
+    if (!imu_init(IMU_INIT_RETRIES, IMU_USE_DEBUG)) {
+        APP_DEBUG_ERROR("IMU", "IMU initialization failed!");
+        global_system_error |= SYS_ERROR_IMU_INIT;
+    }
 
     static uint32_t last_publish = 0;
     static uint32_t last_log = 0;
+    static uint32_t last_health = 0;
+    static bool imu_was_ok = true;
 
     while (1) {
+        uint32_t now = osKernelGetTickCount();
+
+        // Periodic Health Check (every 1s)
+        if (now - last_health >= 1000) {
+            last_health = now;
+            bool imu_ok = imu_health_check();
+            
+            if (imu_ok && !imu_was_ok) {
+                APP_DEBUG_INFO("IMU", "IMU recovered!");
+                global_system_error &= ~SYS_ERROR_IMU_INIT;
+                imu_was_ok = true;
+            } else if (!imu_ok && imu_was_ok) {
+                APP_DEBUG_ERROR("IMU", "IMU health check failed!");
+                global_system_error |= SYS_ERROR_IMU_INIT;
+                imu_was_ok = false;
+            }
+        }
+
         // Update IMU (always at loop rate)
         imu_update();
-
-        uint32_t now = osKernelGetTickCount();
 
         // ROS Publish 
         if (now - last_publish >= TIME_IMU_PUBLISH_MS) {

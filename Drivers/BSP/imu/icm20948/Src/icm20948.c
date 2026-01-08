@@ -129,7 +129,7 @@ static void ICM20948_accel_full_scale_select(accel_full_scale_t fs) {
     }
 }
 
-void ICM20948_init(bool debug) {
+bool ICM20948_init(uint8_t retries, bool debug) {
     g_debug = debug;
     ICM20948_device_reset();
     HAL_Delay(100);
@@ -139,6 +139,7 @@ void ICM20948_init(bool debug) {
     uint8_t id = ICM20948_read_single_reg(ub_0, B0_WHO_AM_I);
     if (id != 0xEA) {
         if (g_debug) APP_DEBUG_ERROR("ICM20948", "WHO_AM_I failed: 0x%02X (expected 0xEA)\r\n", id);
+        return false;
     } else {
         if (g_debug) APP_DEBUG_INFO("ICM20948", "detected!\r\n");
     }
@@ -155,6 +156,7 @@ void ICM20948_init(bool debug) {
     ICM20948_accel_full_scale_select(_16g);
 
     ICM20948_write_single_reg(ub_0, B0_PWR_MGMT_2, 0x00);
+    return true;
 }
 
 bool ICM20948_who_am_i(void) {

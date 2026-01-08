@@ -25,7 +25,8 @@ void StatePubTimerCallback(void *argument)
     .state = current_state,
     .mode = current_mode,
     .is_moving_wheels = is_moving_wheels,
-    .is_moving_spatial = is_moving_spatial
+    .is_moving_spatial = is_moving_spatial,
+    .error_code = global_system_error
   };
   serial_ros_publish(TOPIC_PUB_MACHINE_INFO, (uint8_t*)&payload, sizeof(payload));
   
@@ -90,10 +91,16 @@ void AppManagerTask(void *argument) {
         }
     };
 
-    motor_init(&motor_fl, &motor_fl_cfg, MOTOR_ID_1);
-    motor_init(&motor_fr, &motor_fr_cfg, MOTOR_ID_2);
-    motor_init(&motor_bl, &motor_bl_cfg, MOTOR_ID_3);
-    motor_init(&motor_br, &motor_br_cfg, MOTOR_ID_4);
+    bool m_ok = true;
+    m_ok &= motor_init(&motor_fl, &motor_fl_cfg, MOTOR_ID_1);
+    m_ok &= motor_init(&motor_fr, &motor_fr_cfg, MOTOR_ID_2);
+    m_ok &= motor_init(&motor_bl, &motor_bl_cfg, MOTOR_ID_3);
+    m_ok &= motor_init(&motor_br, &motor_br_cfg, MOTOR_ID_4);
+
+    if (!m_ok) {
+        APP_DEBUG_ERROR("MANAGER", "Motor initialization failed!");
+        global_system_error |= SYS_ERROR_MOTOR_INIT;
+    }
 
     // Initialize and start state publisher timer
     state_pub_timer_id = osTimerNew(StatePubTimerCallback, osTimerPeriodic, NULL, NULL);

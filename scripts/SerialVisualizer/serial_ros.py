@@ -12,6 +12,8 @@ class SerialRosProtocol:
     TOPIC_SUB_CMD_VEL = 0x04
     TOPIC_SUB_OPERATION_MODE = 0x05
     TOPIC_SUB_OPERATION_RUN = 0x06
+    TOPIC_SUB_RESET_STOP_CMD = 0x07
+    TOPIC_SUB_ESTOP_CMD = 0x08
 
     # States for unpacking
     STATE_WAIT_H1 = 0
@@ -93,14 +95,15 @@ class SerialRosProtocol:
 # Data Structure Parsers
 def parse_machine_info(data):
     try:
-        # struct machine_info { uint8_t, uint8_t, uint8_t, uint8_t } -> 4 bytes
-        if len(data) >= 4:
-            state, mode, wheels, spatial = struct.unpack("<BBBB", data[:4])
+        # struct machine_info { uint8_t, uint8_t, uint8_t, uint8_t, uint32_t } -> 8 bytes
+        if len(data) >= 8:
+            state, mode, wheels, spatial, error = struct.unpack("<BBBB I", data[:8])
             return {
                 "state": state, 
                 "mode": mode, 
                 "moving_wheels": bool(wheels),
-                "moving_spatial": bool(spatial)
+                "moving_spatial": bool(spatial),
+                "error_code": error
             }
     except:
         pass

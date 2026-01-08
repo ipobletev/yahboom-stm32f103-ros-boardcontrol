@@ -1,6 +1,7 @@
 #include "imu_app.h"
 #include "icm20948.h"
 #include "ak09916.h"
+#include <stdint.h>
 #include <string.h>
 
 static axises_t current_accel;
@@ -8,9 +9,10 @@ static axises_t current_gyro;
 static axises_t current_mag;
 static imu_data_t current_imu_data;
 
-void imu_init(bool debug) {
-    ICM20948_init(debug);
-    AK09916_init(debug);
+bool imu_init(uint8_t retries, bool debug) {
+    bool icm_ok = ICM20948_init(retries, debug);
+    bool ak_ok = AK09916_init(retries, debug);
+    return icm_ok && ak_ok;
 }
 
 void imu_update(void) {
@@ -35,4 +37,10 @@ void imu_get_data(imu_data_t *data) {
     if (data) {
         memcpy(data, &current_imu_data, sizeof(imu_data_t));
     }
+}
+
+bool imu_health_check(void) {
+    bool icm_ok = ICM20948_who_am_i();
+    bool ak_ok = AK09916_who_am_i();
+    return icm_ok && ak_ok;
 }

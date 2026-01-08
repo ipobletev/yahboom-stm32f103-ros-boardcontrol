@@ -14,7 +14,7 @@
 #define MAG_CNTL3 0x32
 
 /* Function Prototypes */
-void AK09916_init(bool debug);
+bool AK09916_init(uint8_t retries, bool debug);
 bool AK09916_mag_read(raw_data_t* data);
 bool AK09916_mag_read_uT(axises_t* data);
 bool AK09916_who_am_i(void);

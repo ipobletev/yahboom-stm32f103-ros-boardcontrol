@@ -13,7 +13,7 @@ typedef struct {
 /**
  * @brief Initialize IMU application.
  */
-void imu_init(bool debug);
+bool imu_init(uint8_t retries, bool debug);
 
 /**
  * @brief Update IMU data.
@@ -25,5 +25,11 @@ void imu_update(void);
  * @param data Pointer to imu_data_t structure.
  */
 void imu_get_data(imu_data_t *data);
+
+/**
+ * @brief Check IMU sensors health (Who Am I registers).
+ * @return true if all sensors are OK, false otherwise.
+ */
+bool imu_health_check(void);
 
 #endif /* IMU_APP_H */

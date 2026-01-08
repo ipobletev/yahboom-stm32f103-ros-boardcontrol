@@ -42,20 +42,28 @@ static void ICM20948_i2c_master_init(void) {
     ICM20948_write_single_reg(ub_3, B3_I2C_MST_CTRL, 0x17); 
 }
 
-void AK09916_init(bool debug) {
+bool AK09916_init(uint8_t retries, bool debug) {
     g_debug = debug;
     ICM20948_i2c_master_reset();
     ICM20948_i2c_master_init();
 
-    while(AK09916_read_reg(MAG_WIA2) != 0x09) {
-        if (g_debug) APP_DEBUG_INFO("AK09916", "Waiting for AK09916...\r\n");
+    while(AK09916_read_reg(MAG_WIA2) != 0x09 && retries > 0) {
+        if (g_debug) APP_DEBUG_INFO("AK09916", "Waiting for AK09916... (%d retries left)\r\n", retries);
         HAL_Delay(100);
+        retries--;
     }
+
+    if (retries == 0) {
+        if (g_debug) APP_DEBUG_ERROR("AK09916", "Magnetometer NOT detected!\r\n");
+        return false;
+    }
+    
     if (g_debug) APP_DEBUG_INFO("AK09916", "Magnetometer detected!\r\n");
 
     AK09916_write_reg(MAG_CNTL3, 0x01);
     HAL_Delay(100);
     AK09916_write_reg(MAG_CNTL2, 0x08);
+    return true;
 }
 
 bool AK09916_mag_read(raw_data_t* data) {

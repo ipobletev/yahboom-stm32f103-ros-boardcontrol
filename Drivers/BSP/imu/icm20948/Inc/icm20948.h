@@ -83,7 +83,7 @@ typedef enum {
 #define B3_I2C_SLV1_DO     0x0A
 
 /* Function Prototypes */
-void ICM20948_init(bool debug);
+bool ICM20948_init(uint8_t retries, bool debug);
 void ICM20948_gyro_read(raw_data_t* data);
 void ICM20948_accel_read(raw_data_t* data);
 void ICM20948_gyro_read_dps(axises_t* data);

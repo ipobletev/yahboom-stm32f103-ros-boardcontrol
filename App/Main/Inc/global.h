@@ -5,9 +5,11 @@
 #include <stdbool.h>
 #include "cmsis_os2.h"
 #include "motor.h"
+#include "app_errors.h"
 
 // DEBUG CONFIG
 #define APP_DEBUG_ENABLED 0
+#define APP_USE_HARDWARE_ERROR 0 // If hardware error is enabled, the system will stop (EMERGENCY STOP) if a hardware error is detected
 
 // TIMEOUT CONFIG FOR CMD VEL. If no new command is received for this time, the motors will stop
 #define TIMEOUT_LAST_CMD_MS 250
@@ -28,6 +30,7 @@
 //IMU CONFIG
 #define IMU_USE_DEBUG true
 #define TIME_IMU_UPDATE_MS 10                   //100Hz (Internal update rate)
+#define IMU_INIT_RETRIES 5
 
 // MOTOR CONFIG
 #define MOTOR_ID_1 0
@@ -78,6 +81,8 @@
 #define TOPIC_SUB_CMD_VEL           0x04
 #define TOPIC_SUB_OPERATION_MODE    0x05
 #define TOPIC_SUB_OPERATION_RUN     0x06
+#define TOPIC_SUB_RESET_STOP_CMD    0x07
+#define TOPIC_SUB_ESTOP_CMD         0x08
 
 // MOTION CONFIG
 #define MOTION_FREQ_MS 50
@@ -104,6 +109,10 @@ typedef enum {
 } system_state_t;
 
 /**
+ * @brief System error flags (Refer to app_errors.h for definitions).
+ */
+
+/**
  * @brief System messages for the state queue.
  */
 typedef struct {
@@ -119,17 +128,18 @@ typedef struct {
     operation_mode_t mode;
     bool is_moving_wheels;
     bool is_moving_spatial;
+    uint32_t error_code;
     //future implementation
         //inclination
         //velocity
         //battery
         //temperature
-        //error_code
 } machine_info_t;
 
 /* Shared global variables */
 extern osMessageQueueId_t system_msg_queue;
 extern system_state_t current_state;
+extern uint32_t global_system_error;
 extern operation_mode_t current_mode;
 extern bool is_moving_wheels;
 extern bool is_moving_spatial;

@@ -4,9 +4,12 @@ import serial.tools.list_ports
 import struct
 import threading
 import time
+import csv
+import os
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QComboBox, QPushButton, 
-                             QGridLayout, QGroupBox, QDoubleSpinBox, QTabWidget)
+                             QGridLayout, QGroupBox, QDoubleSpinBox, QTabWidget,
+                             QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog)
 from PySide6.QtCore import QTimer, Qt, Signal, Slot
 import pyqtgraph as pg
 import numpy as np
@@ -43,6 +46,28 @@ class SerialVisualizer(QMainWindow):
         }
         self.last_stats_time = time.time()
         self.lbl_topic_freqs = {}
+
+        # Error mapping (matching app_errors.h)
+        self.sys_errors = {
+            (1 << 0): "IMU Init Error",
+            (1 << 1): "Motor Init Error",
+            (1 << 2): "Encoder Init Error",
+            (1 << 3): "Serial ROS Init Error",
+            (1 << 8): "IMU Timeout",
+            (1 << 9): "Serial Timeout",
+            (1 << 10): "Command Timeout",
+            (1 << 16): "Queue Full",
+            (1 << 17): "Timer Fail",
+            (1 << 18): "Malloc Fail",
+            (1 << 24): "Watchdog Reset",
+            (1 << 25): "Brownout Detected",
+            (1 << 26): "Overtemperature",
+        }
+
+        # Recording state
+        self.is_recording = False
+        self.recorded_data = [] # List of dicts
+        self.recording_start_time = 0
 
         self.setup_ui()
         
@@ -87,6 +112,41 @@ class SerialVisualizer(QMainWindow):
 
         self.setup_raw_data_tab()
         self.setup_graphs_tab()
+        self.setup_status_tab()
+
+    def setup_status_tab(self):
+        status_tab = QWidget()
+        self.tabs.addTab(status_tab, "System Status")
+        layout = QVBoxLayout(status_tab)
+
+        # Errors Table
+        err_detailed_group = QGroupBox("Health Monitoring & Error Codes")
+        err_detailed_layout = QVBoxLayout(err_detailed_group)
+        self.error_table = QTableWidget(len(self.sys_errors), 3)
+        self.error_table.setHorizontalHeaderLabels(["Component / System", "Error Code", "Status"])
+        self.error_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.error_table.verticalHeader().setVisible(False)
+        self.error_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        
+        # Pre-fill table with "-" (No data yet)
+        for row, (bit, name) in enumerate(self.sys_errors.items()):
+            self.error_table.setItem(row, 0, QTableWidgetItem(name))
+            
+            # Error Code Column (Bitmask)
+            item_code = QTableWidgetItem(f"0x{bit:08X}")
+            item_code.setTextAlignment(Qt.AlignCenter)
+            item_code.setForeground(Qt.gray)
+            self.error_table.setItem(row, 1, item_code)
+
+            # Status Column
+            item_status = QTableWidgetItem("-")
+            item_status.setTextAlignment(Qt.AlignCenter)
+            item_status.setForeground(Qt.gray)
+            self.error_table.setItem(row, 2, item_status)
+            
+        err_detailed_layout.addWidget(self.error_table)
+        layout.addWidget(err_detailed_group)
+        layout.addStretch()
 
     def setup_raw_data_tab(self):
         raw_tab = QWidget()
@@ -99,10 +159,11 @@ class SerialVisualizer(QMainWindow):
         # Machine Info
         info_group = QGroupBox("Machine Info")
         info_grid = QGridLayout(info_group)
-        self.lbl_state = QLabel("IDLE")
-        self.lbl_mode = QLabel("MANUAL")
-        self.lbl_moving_wheels = QLabel("NO")
-        self.lbl_moving_spatial = QLabel("NO")
+        self.lbl_state = QLabel("-")
+        self.lbl_mode = QLabel("-")
+        self.lbl_moving_wheels = QLabel("-")
+        self.lbl_moving_spatial = QLabel("-")
+        self.lbl_error_code = QLabel("-")
         info_grid.addWidget(QLabel("State:"), 0, 0)
         info_grid.addWidget(self.lbl_state, 0, 1)
         info_grid.addWidget(QLabel("Mode:"), 1, 0)
@@ -111,17 +172,19 @@ class SerialVisualizer(QMainWindow):
         info_grid.addWidget(self.lbl_moving_wheels, 2, 1)
         info_grid.addWidget(QLabel("Moving (Spatial):"), 3, 0)
         info_grid.addWidget(self.lbl_moving_spatial, 3, 1)
+        info_grid.addWidget(QLabel("<b>Error Code:</b>"), 4, 0)
+        info_grid.addWidget(self.lbl_error_code, 4, 1)
         
         self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO] = QLabel("0.0 Hz")
-        info_grid.addWidget(QLabel("<b>Freq:</b>"), 4, 0)
-        info_grid.addWidget(self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO], 4, 1)
+        info_grid.addWidget(QLabel("Freq:"), 5, 0)
+        info_grid.addWidget(self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO], 5, 1)
         
         dash_layout.addWidget(info_group)
 
         # Encoders
         enc_group = QGroupBox("Encoders")
         enc_grid = QGridLayout(enc_group)
-        self.lbl_encs = [QLabel("0") for _ in range(4)]
+        self.lbl_encs = [QLabel("-") for _ in range(4)]
         labels = ["FL:", "FR:", "BL:", "BR:"]
         for i in range(4):
             enc_grid.addWidget(QLabel(labels[i]), i // 2, (i % 2) * 2)
@@ -138,9 +201,9 @@ class SerialVisualizer(QMainWindow):
         # IMU Raw values
         imu_group = QGroupBox("IMU Raw Data")
         imu_grid = QGridLayout(imu_group)
-        self.lbl_acc = [QLabel("0.00") for _ in range(3)]
-        self.lbl_gyro = [QLabel("0.00") for _ in range(3)]
-        self.lbl_mag = [QLabel("0.00") for _ in range(3)]
+        self.lbl_acc = [QLabel("-") for _ in range(3)]
+        self.lbl_gyro = [QLabel("-") for _ in range(3)]
+        self.lbl_mag = [QLabel("-") for _ in range(3)]
         
         imu_grid.addWidget(QLabel("Accelerometer (X,Y,Z):"), 0, 0)
         for i in range(3): imu_grid.addWidget(self.lbl_acc[i], 0, i+1)
@@ -190,8 +253,25 @@ class SerialVisualizer(QMainWindow):
         mode_layout.addWidget(self.btn_reset_stop)
         mode_layout.addWidget(btn_estop)
         ctrl_main_layout.addLayout(mode_layout)
-
         layout.addWidget(ctrl_group)
+
+        # Recording Control
+        rec_group = QGroupBox("Data Recording")
+        rec_layout = QHBoxLayout(rec_group) # horizontal for record button + info
+        self.btn_toggle_rec = QPushButton("Start Recording")
+        self.btn_toggle_rec.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
+        self.btn_toggle_rec.clicked.connect(self.toggle_recording)
+        
+        info_rec_layout = QVBoxLayout()
+        self.lbl_rec_status = QLabel("Status: Idle")
+        self.lbl_rec_count = QLabel("Samples: 0")
+        info_rec_layout.addWidget(self.lbl_rec_status)
+        info_rec_layout.addWidget(self.lbl_rec_count)
+        
+        rec_layout.addWidget(self.btn_toggle_rec)
+        rec_layout.addLayout(info_rec_layout)
+        
+        layout.addWidget(rec_group)
         layout.addStretch()
 
     def setup_graphs_tab(self):
@@ -284,19 +364,60 @@ class SerialVisualizer(QMainWindow):
             self.topic_stats[topic_id] = {"name": f"UNKNOWN_0X{topic_id:02X}", "count": 1, "freq": 0.0}
             # Note: The UI might not show this new topic until manual refresh or dynamic UI update implementation
 
+        if not hasattr(self, 'current_data_cache'):
+            self.current_data_cache = {
+                "state": 0, "mode": 0, "wheels": 0, "spatial": 0, "error": 0,
+                "acc_x": 0, "acc_y": 0, "acc_z": 0,
+                "gyro_x": 0, "gyro_y": 0, "gyro_z": 0,
+                "mag_x": 0, "mag_y": 0, "mag_z": 0,
+                "enc_fl": 0, "enc_fr": 0, "enc_bl": 0, "enc_br": 0
+            }
+
         if topic_id == self.protocol.TOPIC_PUB_MACHINE_INFO:
             info = parse_machine_info(payload)
             if info:
+                self.current_data_cache.update({
+                    "state": info["state"], "mode": info["mode"], 
+                    "wheels": int(info["moving_wheels"]), 
+                    "spatial": int(info["moving_spatial"]),
+                    "error": info["error_code"]
+                })
                 states = ["IDLE", "MOVING", "TEMP_STOP", "E_STOP"]
                 modes = ["MANUAL", "AUTONOMOUS"]
                 self.lbl_state.setText(states[info["state"]] if info["state"] < len(states) else str(info["state"]))
                 self.lbl_mode.setText(modes[info["mode"]] if info["mode"] < len(modes) else str(info["mode"]))
                 self.lbl_moving_wheels.setText("YES" if info["moving_wheels"] else "NO")
                 self.lbl_moving_spatial.setText("YES" if info["moving_spatial"] else "NO")
+                self.lbl_error_code.setText(f"0x{info['error_code']:08X}")
                 
                 # Style colors for easier visualization
                 self.lbl_moving_wheels.setStyleSheet("color: lime; font-weight: bold;" if info["moving_wheels"] else "color: gray;")
                 self.lbl_moving_spatial.setStyleSheet("color: orange; font-weight: bold;" if info["moving_spatial"] else "color: gray;")
+                
+                if info["error_code"] != 0:
+                    self.lbl_error_code.setStyleSheet("color: red; font-weight: bold;")
+                else:
+                    self.lbl_error_code.setStyleSheet("color: gray;")
+
+                # Update Error Table
+                for row, (bit, name) in enumerate(self.sys_errors.items()):
+                    is_active = (info["error_code"] & bit) != 0
+                    code_item = self.error_table.item(row, 1)
+                    status_item = self.error_table.item(row, 2)
+                    
+                    if is_active:
+                        status_item.setText("FAULT")
+                        status_item.setBackground(Qt.red)
+                        status_item.setForeground(Qt.white)
+                        code_item.setForeground(Qt.white)
+                        code_item.setBackground(Qt.darkRed)
+                    else:
+                        status_item.setText("OK")
+                        status_item.setBackground(Qt.transparent)
+                        status_item.setForeground(Qt.green)
+                        code_item.setForeground(Qt.white)
+                        code_item.setBackground(Qt.transparent)
+
                 if info["state"] == 3: # E_STOP
                     self.lbl_state.setStyleSheet("color: red; font-weight: bold;")
                 else:
@@ -323,6 +444,12 @@ class SerialVisualizer(QMainWindow):
                     self.imu_data["mag"][i][-1] = imu["mag"][i]
                     self.mag_curves[i].setData(self.imu_data["mag"][i])
                     self.lbl_mag[i].setText(f"{imu['mag'][i]:.2f}")
+                
+                self.current_data_cache.update({
+                    "acc_x": imu["acc"][0], "acc_y": imu["acc"][1], "acc_z": imu["acc"][2],
+                    "gyro_x": imu["gyro"][0], "gyro_y": imu["gyro"][1], "gyro_z": imu["gyro"][2],
+                    "mag_x": imu["mag"][0], "mag_y": imu["mag"][1], "mag_z": imu["mag"][2]
+                })
 
         elif topic_id == self.protocol.TOPIC_PUB_ENCODER:
             encoders = parse_encoder(payload)
@@ -333,6 +460,18 @@ class SerialVisualizer(QMainWindow):
                     self.encoder_data[i] = np.roll(self.encoder_data[i], -1)
                     self.encoder_data[i][-1] = encoders[i]
                     self.enc_curves[i].setData(self.encoder_data[i])
+                
+                self.current_data_cache.update({
+                    "enc_fl": encoders[0], "enc_fr": encoders[1], 
+                    "enc_bl": encoders[2], "enc_br": encoders[3]
+                })
+
+        # Record if active (record a sample every time we get a message, resulting in high-rate log)
+        if self.is_recording:
+            row = {"timestamp": time.time() - self.recording_start_time}
+            row.update(self.current_data_cache)
+            self.recorded_data.append(row)
+            self.lbl_rec_count.setText(f"Samples: {len(self.recorded_data)}")
 
     def send_velocity(self):
         if not self.serial_port or not self.serial_port.is_open:
@@ -354,9 +493,8 @@ class SerialVisualizer(QMainWindow):
     def send_estop(self):
         if not self.serial_port or not self.serial_port.is_open:
             return
-        # Values matching system_state_t in global.h: STATE_EMERGENCY_STOP = 3
-        data = pack_enum(3)
-        frame = self.protocol.pack(self.protocol.TOPIC_SUB_OPERATION_RUN, data)
+        data = pack_enum(3) # STATE_EMERGENCY_STOP
+        frame = self.protocol.pack(self.protocol.TOPIC_SUB_ESTOP_CMD, data)
         self.serial_port.write(frame)
 
     def send_run_cmd(self):
@@ -370,10 +508,43 @@ class SerialVisualizer(QMainWindow):
     def send_reset_stop(self):
         if (not self.serial_port or not self.serial_port.is_open):
             return
-        # Values matching system_state_t in global.h: STATE_TEMPORAL_STOP = 2
-        data = pack_enum(2)
-        frame = self.protocol.pack(self.protocol.TOPIC_SUB_OPERATION_RUN, data)
+        data = pack_enum(2) # STATE_TEMPORAL_STOP
+        frame = self.protocol.pack(self.protocol.TOPIC_SUB_RESET_STOP_CMD, data)
         self.serial_port.write(frame)
+
+    def toggle_recording(self):
+        if not self.is_recording:
+            self.is_recording = True
+            self.recorded_data = []
+            self.recording_start_time = time.time()
+            self.btn_toggle_rec.setText("Stop & Save Recording")
+            self.btn_toggle_rec.setStyleSheet("background-color: #e67e22; color: white; font-weight: bold;")
+            self.lbl_rec_status.setText("Status: RECORDING...")
+            self.lbl_rec_status.setStyleSheet("color: red; font-weight: bold;")
+        else:
+            self.is_recording = False
+            self.btn_toggle_rec.setText("Start Recording")
+            self.btn_toggle_rec.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
+            self.lbl_rec_status.setText("Status: Idle")
+            self.lbl_rec_status.setStyleSheet("")
+            if len(self.recorded_data) > 0:
+                self.save_recording_to_csv()
+
+    def save_recording_to_csv(self):
+        filename, _ = QFileDialog.getSaveFileName(self, "Save Data Recording", "session_log.csv", "CSV Files (*.csv)")
+        if filename:
+            try:
+                with open(filename, 'w', newline='') as f:
+                    if not self.recorded_data:
+                        return
+                    writer = csv.DictWriter(f, fieldnames=self.recorded_data[0].keys())
+                    writer.writeheader()
+                    writer.writerows(self.recorded_data)
+                print(f"Recorded {len(self.recorded_data)} samples to {filename}")
+            except Exception as e:
+                print(f"Error saving CSV: {e}")
+        self.recorded_data = []
+        self.lbl_rec_count.setText("Samples: 0")
 
     def refresh_topic_stats(self):
         now = time.time()

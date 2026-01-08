@@ -13,6 +13,7 @@
 /* Shared status variables (Global) */
 osMessageQueueId_t system_msg_queue = NULL;
 system_state_t current_state = STATE_TEMPORAL_STOP;
+uint32_t global_system_error = SYS_ERROR_NONE;
 operation_mode_t current_mode = MODE_MANUAL;
 bool is_moving_wheels = false;
 bool is_moving_spatial = false;

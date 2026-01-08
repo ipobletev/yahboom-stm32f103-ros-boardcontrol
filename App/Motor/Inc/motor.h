@@ -47,7 +47,7 @@ typedef struct {
  * @param config Pointer to the configuration.
  * @param id Motor hardware identifier.
  */
-void motor_init(motor_t *motor, const motor_config_t *config, app_motor_id_t id);
+bool motor_init(motor_t *motor, const motor_config_t *config, app_motor_id_t id);
 
 /**
  * @brief Set motor speed (open loop).
