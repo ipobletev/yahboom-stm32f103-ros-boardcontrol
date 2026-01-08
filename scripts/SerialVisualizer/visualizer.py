@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QLabel, QComboBox, QPushButton, 
                              QGridLayout, QGroupBox, QDoubleSpinBox, QTabWidget,
                              QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog,
-                             QLineEdit, QScrollArea, QCheckBox, QProgressBar) # Added QLineEdit, QScrollArea, QCheckBox
+                             QLineEdit, QScrollArea, QCheckBox, QProgressBar, QSizePolicy) # Added QLineEdit, QScrollArea, QCheckBox, QSizePolicy
 from PySide6.QtCore import QTimer, Qt, Signal, Slot
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl # Added pyqtgraph.opengl
@@ -20,6 +20,47 @@ import numpy as np
 
 from serial_ros import (SerialProtocol, parse_machine_info, parse_imu, 
                         parse_encoder, pack_cmd_vel, pack_enum)
+
+
+class KalmanAngle:
+    def __init__(self):
+        self.Q_angle = 0.001
+        self.Q_bias = 0.003
+        self.R_measure = 0.03
+        self.angle = 0.0
+        self.bias = 0.0
+        self.P = [[0.0, 0.0], [0.0, 0.0]]
+
+    def compute(self, newAngle, newRate, dt):
+        # Predict
+        rate = newRate - self.bias
+        self.angle += dt * rate
+
+        # Update P
+        self.P[0][0] += dt * (dt*self.P[1][1] - self.P[0][1] - self.P[1][0] + self.Q_angle)
+        self.P[0][1] -= dt * self.P[1][1]
+        self.P[1][0] -= dt * self.P[1][1]
+        self.P[1][1] += self.Q_bias * dt
+
+        # Innovation
+        y = newAngle - self.angle
+        S = self.P[0][0] + self.R_measure
+        K = [self.P[0][0] / S, self.P[1][0] / S]
+
+        # Update state
+        self.angle += K[0] * y
+        self.bias += K[1] * y
+
+        # Update covariance P
+        P00_temp = self.P[0][0]
+        P01_temp = self.P[0][1]
+
+        self.P[0][0] -= K[0] * P00_temp
+        self.P[0][1] -= K[0] * P01_temp
+        self.P[1][0] -= K[1] * P00_temp
+        self.P[1][1] -= K[1] * P01_temp
+
+        return self.angle
 
 class SerialVisualizer(QMainWindow):
     data_received = Signal(int, bytes)
@@ -99,6 +140,12 @@ class SerialVisualizer(QMainWindow):
         self.stats_timer = QTimer()
         self.stats_timer.timeout.connect(self.refresh_topic_stats)
         self.stats_timer.start(1000)
+        
+        # Kalman Filters
+        self.kalman_roll = KalmanAngle()
+        self.kalman_pitch = KalmanAngle()
+        self.kalman_yaw = KalmanAngle()
+        self.last_imu_time = 0
         
         self.update_ports()
 
@@ -890,10 +937,12 @@ class SerialVisualizer(QMainWindow):
     def create_3d_view_tab(self):
         widget = QWidget()
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0) # Maximize space
         
         self.gl_view = gl.GLViewWidget()
         self.gl_view.opts['distance'] = 40
         self.gl_view.setWindowTitle('3D Orientation')
+        self.gl_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         # Grid
         g = gl.GLGridItem()
@@ -911,11 +960,12 @@ class SerialVisualizer(QMainWindow):
         self.board_box.translate(-5, -3, 0) # Center the box
         self.gl_view.addItem(self.board_box)
         
-        layout.addWidget(self.gl_view)
+        layout.addWidget(self.gl_view, 1) # Stretch factor 1
         
         # Info label
         self.lbl_3d_info = QLabel("R: 0.0 P: 0.0 Y: 0.0")
-        layout.addWidget(self.lbl_3d_info)
+        self.lbl_3d_info.setStyleSheet("padding: 5px; font-weight: bold;")
+        layout.addWidget(self.lbl_3d_info, 0) # Stretch factory 0
         
         widget.setLayout(layout)
         return widget
@@ -946,13 +996,47 @@ class SerialVisualizer(QMainWindow):
         
         yaw = math.atan2(-by, bx) * 57.2958
         
-        self.lbl_3d_info.setText(f"R: {roll:.1f} P: {pitch:.1f} Y: {yaw:.1f}")
+        # Apply Kalman Filter
+        # -------------------
+        gx = self.current_data_cache.get("gyro_x", 0)
+        gy = self.current_data_cache.get("gyro_y", 0)
+        gz = self.current_data_cache.get("gyro_z", 0)
+
+        dt = 0.01 # Default 10ms (100Hz)
+        now = time.time()
+        if self.last_imu_time > 0:
+            dt = now - self.last_imu_time
+        
+        # Sanity check for dt
+        if dt > 0.5: dt = 0.01 
+        self.last_imu_time = now
+
+        # Compute smoothed angles
+        # Note: Gyro axes mapping depends on sensor mounting. Assuming standard matching for now.
+        # Gyro rate is in dps (degrees per second)
+        roll_k = self.kalman_roll.compute(roll, gx, dt)
+        pitch_k = self.kalman_pitch.compute(pitch, gy, dt)
+        
+        # For yaw, we use magnetometer offset as 'newAngle' and gyro z as rate
+        # Warning: Yaw has no 'gravity' vector to correct drift perfectly without mag, 
+        # but here we use the mag-derived yaw as the measurement.
+        # Handle wrapping for yaw (0-360)? Kalman expects continuous linear. 
+        # A simple approach is passing the difference or unwrapping, but for small steps it's fine 
+        # unless it crosses +/-180.
+        
+        # Simple wrap fix before filter:
+        if (yaw - self.kalman_yaw.angle) > 180: self.kalman_yaw.angle += 360
+        if (yaw - self.kalman_yaw.angle) < -180: self.kalman_yaw.angle -= 360
+        
+        yaw_k = self.kalman_yaw.compute(yaw, gz, dt)
+
+        self.lbl_3d_info.setText(f"R: {roll_k:.1f} P: {pitch_k:.1f} Y: {yaw_k:.1f} (Raw Y: {yaw:.1f})")
         
         # Update transform
         tr = pg.Transform3D()
-        tr.rotate(yaw, 0, 0, 1)
-        tr.rotate(pitch, 0, 1, 0)
-        tr.rotate(roll, 1, 0, 0)
+        tr.rotate(yaw_k, 0, 0, 1)
+        tr.rotate(pitch_k, 0, 1, 0)
+        tr.rotate(roll_k, 1, 0, 0)
         
         # Reset and apply
         self.board_box.setTransform(tr)
