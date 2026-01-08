@@ -111,7 +111,7 @@ def parse_machine_info(data):
                 "temperature": temperature,
                 "angular_velocity": angular_velocity
             }
-        # Fallback for old firmware (24 bytes)
+        # Fallback for old firmware (28 bytes)
         elif len(data) >= 28:
             state, mode, wheels, spatial, error, roll, pitch, velocity, battery, temperature = struct.unpack("<BBBB I fffff", data[:28])
             return {

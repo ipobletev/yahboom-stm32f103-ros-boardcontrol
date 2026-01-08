@@ -15,6 +15,6 @@ echo Installing dependencies...
 pip install -r requirements.txt
 
 echo Launching Visualizer...
-python visualizer.py
+python src/main.py
 
 pause

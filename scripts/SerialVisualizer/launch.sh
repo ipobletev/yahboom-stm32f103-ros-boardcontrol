@@ -10,10 +10,14 @@ if [ ! -d ".venv" ]; then
 fi
 
 echo "Activating virtual environment..."
-source .venv/bin/activate
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+    source .venv/Scripts/activate
+else
+    source .venv/bin/activate
+fi
 
 echo "Installing dependencies..."
 pip install -r requirements.txt
 
 echo "Launching Visualizer..."
-python3 visualizer.py
+python3 src/main.py
