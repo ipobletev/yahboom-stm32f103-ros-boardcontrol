@@ -6,6 +6,7 @@
 #include "io_key.h"
 #include "io_buzzer.h"
 #include <stdio.h>
+#include "config.h"
 
 extern cmd_vel_t last_cmd;
 
@@ -152,7 +153,7 @@ void AppControllerTask(void *argument) {
             send_msg = true;
 
         }
-        
+
         #if APP_USE_HARDWARE_ERROR == 1
         // 2. Process hardware errors
         if (global_system_error != SYS_ERROR_NONE && current_state != STATE_EMERGENCY_STOP) {

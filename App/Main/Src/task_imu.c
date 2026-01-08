@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "serial_ros.h"
+#include "config.h"
 
 void AppIMUTask(void *argument) {
     (void)argument;

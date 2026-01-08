@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "config.h"
 
 void AppMotionTask(void *argument) {
     (void)argument;

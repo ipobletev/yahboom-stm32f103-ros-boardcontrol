@@ -7,6 +7,7 @@
 #include "motor.h"
 #include "io_led.h"
 #include "serial_ros.h"
+#include "config.h"
 
 osTimerId_t state_pub_timer_id;
 

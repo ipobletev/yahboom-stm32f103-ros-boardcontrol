@@ -12,7 +12,6 @@
 #include "app_debug.h"
 #include "app_tasks.h"
 
-
 /* 
     Test task
 */
@@ -49,11 +48,11 @@ void AppHearthbeatTask(void *argument) {
 
     //micro_ros_app_init();
 
-    APP_DEBUG_INFO("HEARTBEAT", "Application layer initialized");
+    //APP_DEBUG_INFO("HEARTBEAT", "Application layer initialized");
 
     while (1) {
 
-        APP_DEBUG_INFO("HEARTBEAT", "Application layer running");
+        //APP_DEBUG_INFO("HEARTBEAT", "Application layer running");
 
         //micro_ros_app_run();
         
