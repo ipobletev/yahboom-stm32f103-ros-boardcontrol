@@ -95,8 +95,24 @@ class SerialProtocol:
 # Data Structure Parsers
 def parse_machine_info(data):
     try:
-        # struct machine_info { uint8_t, uint8_t, uint8_t, uint8_t, uint32_t, float, float, float, float, float } -> 28 bytes
-        if len(data) >= 28:
+        # struct machine_info { uint8_t, uint8_t, uint8_t, uint8_t, uint32_t, float, float, float, float, float, float } -> 32 bytes
+        if len(data) >= 32:
+            state, mode, wheels, spatial, error, roll, pitch, velocity, battery, temperature, angular_velocity = struct.unpack("<BBBB I ffffff", data[:32])
+            return {
+                "state": state, 
+                "mode": mode, 
+                "moving_wheels": bool(wheels),
+                "moving_spatial": bool(spatial),
+                "error_code": error,
+                "roll": roll,
+                "pitch": pitch,
+                "velocity": velocity,
+                "battery": battery,
+                "temperature": temperature,
+                "angular_velocity": angular_velocity
+            }
+        # Fallback for old firmware (24 bytes)
+        elif len(data) >= 28:
             state, mode, wheels, spatial, error, roll, pitch, velocity, battery, temperature = struct.unpack("<BBBB I fffff", data[:28])
             return {
                 "state": state, 
@@ -108,22 +124,8 @@ def parse_machine_info(data):
                 "pitch": pitch,
                 "velocity": velocity,
                 "battery": battery,
-                "temperature": temperature
-            }
-        # Fallback for old firmware (24 bytes)
-        elif len(data) >= 24:
-            state, mode, wheels, spatial, error, roll, pitch, velocity, battery = struct.unpack("<BBBB I ffff", data[:24])
-            return {
-                "state": state, 
-                "mode": mode, 
-                "moving_wheels": bool(wheels),
-                "moving_spatial": bool(spatial),
-                "error_code": error,
-                "roll": roll,
-                "pitch": pitch,
-                "velocity": velocity,
-                "battery": battery,
-                "temperature": 0.0 # Default value
+                "temperature": temperature,
+                "angular_velocity": 0.0 # Default value
             }
     except:
         pass

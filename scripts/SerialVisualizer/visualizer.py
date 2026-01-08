@@ -195,6 +195,7 @@ class SerialVisualizer(QMainWindow):
         self.lbl_velocity = QLabel("-")
         self.lbl_battery = QLabel("-")
         self.lbl_temperature = QLabel("-")
+        self.lbl_angular_velocity = QLabel("-")
         self.lbl_error_code = QLabel("-")
         info_grid.addWidget(QLabel("State:"), 0, 0)
         info_grid.addWidget(self.lbl_state, 0, 1)
@@ -210,16 +211,18 @@ class SerialVisualizer(QMainWindow):
         info_grid.addWidget(self.lbl_pitch, 5, 1)
         info_grid.addWidget(QLabel("Velocity:"), 6, 0)
         info_grid.addWidget(self.lbl_velocity, 6, 1)
-        info_grid.addWidget(QLabel("Battery:"), 7, 0)
-        info_grid.addWidget(self.lbl_battery, 7, 1)
-        info_grid.addWidget(QLabel("Temp:"), 8, 0)
-        info_grid.addWidget(self.lbl_temperature, 8, 1)
-        info_grid.addWidget(QLabel("<b>Error Code:</b>"), 9, 0)
-        info_grid.addWidget(self.lbl_error_code, 9, 1)
+        info_grid.addWidget(QLabel("Ang. Vel:"), 7, 0)
+        info_grid.addWidget(self.lbl_angular_velocity, 7, 1)
+        info_grid.addWidget(QLabel("Battery:"), 8, 0)
+        info_grid.addWidget(self.lbl_battery, 8, 1)
+        info_grid.addWidget(QLabel("Temp:"), 9, 0)
+        info_grid.addWidget(self.lbl_temperature, 9, 1)
+        info_grid.addWidget(QLabel("<b>Error Code:</b>"), 10, 0)
+        info_grid.addWidget(self.lbl_error_code, 10, 1)
         
         self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO] = QLabel("0.0 Hz")
-        info_grid.addWidget(QLabel("Freq:"), 10, 0)
-        info_grid.addWidget(self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO], 10, 1)
+        info_grid.addWidget(QLabel("Freq:"), 11, 0)
+        info_grid.addWidget(self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO], 11, 1)
         
         dash_layout.addWidget(info_group)
 
@@ -445,7 +448,8 @@ class SerialVisualizer(QMainWindow):
                 "acc_x": 0, "acc_y": 0, "acc_z": 0,
                 "gyro_x": 0, "gyro_y": 0, "gyro_z": 0,
                 "mag_x": 0, "mag_y": 0, "mag_z": 0,
-                "enc_fl": 0, "enc_fr": 0, "enc_bl": 0, "enc_br": 0
+                "enc_fl": 0, "enc_fr": 0, "enc_bl": 0, "enc_br": 0,
+                "angular_velocity": 0
             }
 
         if topic_id == self.protocol.TOPIC_PUB_MACHINE_INFO:
@@ -466,7 +470,8 @@ class SerialVisualizer(QMainWindow):
                     "pitch": info["pitch"],
                     "velocity": info["velocity"],
                     "battery": info["battery"],
-                    "temperature": info["temperature"]
+                    "temperature": info["temperature"],
+                    "angular_velocity": info.get("angular_velocity", 0.0)
                 })
                 states = ["IDLE", "MOVING", "TEMP_STOP", "E_STOP"]
                 modes = ["MANUAL", "AUTONOMOUS"]
@@ -477,6 +482,7 @@ class SerialVisualizer(QMainWindow):
                 self.lbl_roll.setText(f"{info['roll']:.1f}°")
                 self.lbl_pitch.setText(f"{info['pitch']:.1f}°")
                 self.lbl_velocity.setText(f"{info['velocity']:.2f} m/s")
+                self.lbl_angular_velocity.setText(f"{info.get('angular_velocity', 0.0):.2f} °/s")
                 self.lbl_battery.setText(f"{info['battery']:.2f} V")
                 self.lbl_temperature.setText(f"{info['temperature']:.1f} °C")
                 self.lbl_error_code.setText(f"0x{info['error_code']:08X}")

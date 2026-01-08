@@ -51,6 +51,7 @@ typedef struct {
     float velocity;  // linear velocity (m/s)
     float battery;   // battery voltage (V)
     float temperature; // internal temperature (degC)
+    float angular_velocity; // angular velocity (deg/s)
 } machine_info_t;
 
 extern machine_info_t machine_info;
