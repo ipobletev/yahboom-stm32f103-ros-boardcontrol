@@ -98,7 +98,8 @@ void serial_ros_set_callback(serial_ros_cb_t cb) {
 }
 
 void serial_ros_publish(uint8_t topic_id, const void *payload, uint8_t length) {
-    uint8_t buffer[SERIAL_ROS_MAX_PAYLOAD + 5];
+    static uint8_t buffer[SERIAL_ROS_MAX_PAYLOAD + 5];
+    memset(buffer, 0, sizeof(buffer));
     uint16_t total_len = serial_ros_pack(topic_id, (const uint8_t*)payload, length, buffer);
     if (total_len > 0) {
         serial_ros_bsp_send(buffer, total_len);

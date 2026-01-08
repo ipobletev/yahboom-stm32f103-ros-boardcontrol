@@ -22,15 +22,10 @@ void AppEncoderTask(void *argument) {
         int32_t _enc_fr = motor_get_encoder(&_motor_fr);
         int32_t _enc_bl = motor_get_encoder(&_motor_bl);
         int32_t _enc_br = motor_get_encoder(&_motor_br);
-        //fake encoders
-        // int32_t enc_fl = 0;
-        // int32_t enc_fr = 0;
-        // int32_t enc_bl = 0;
-        // int32_t enc_br = 0;
 
-        // // Publish encoders
-        // int32_t enc_data[4] = {enc_fl, enc_fr, enc_bl, enc_br};
-        // serial_ros_publish(TOPIC_PUB_ENCODER, enc_data, sizeof(enc_data));
+        // Publish encoders
+        int32_t enc_data[4] = {_enc_fl, _enc_fr, _enc_bl, _enc_br};
+        serial_ros_publish(TOPIC_PUB_ENCODER, enc_data, sizeof(enc_data));
         
         // // Status logging
         static uint32_t _last_log = 0;

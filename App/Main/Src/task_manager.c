@@ -24,7 +24,7 @@ void StatePubTimerCallback(void *argument)
     .mode = current_mode,
     .is_moving_detected = is_moving_detected
   };
-  //serial_ros_publish(TOPIC_PUB_MACHINE_INFO, (uint8_t*)&payload, sizeof(payload));
+  serial_ros_publish(TOPIC_PUB_MACHINE_INFO, (uint8_t*)&payload, sizeof(payload));
   
   APP_DEBUG_INFO("MANAGER", "State: %d, Mode: %d, Moving: %d\r\n", payload.state, payload.mode, payload.is_moving_detected);
 

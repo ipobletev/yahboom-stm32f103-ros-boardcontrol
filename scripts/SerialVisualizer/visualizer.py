@@ -6,7 +6,7 @@ import threading
 import time
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QComboBox, QPushButton, 
-                             QGridLayout, QGroupBox, QDoubleSpinBox)
+                             QGridLayout, QGroupBox, QDoubleSpinBox, QTabWidget)
 from PySide6.QtCore import QTimer, Qt, Signal, Slot
 import pyqtgraph as pg
 import numpy as np
@@ -20,11 +20,20 @@ class SerialVisualizer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("STM32 Control Board Serial Visualizer")
-        self.resize(1000, 800)
+        self.resize(1200, 900)
 
         self.protocol = SerialRosProtocol()
         self.serial_port = None
         self.running = False
+
+        # Data storage for plots
+        self.max_points = 200
+        self.imu_data = {
+            "acc": [np.zeros(self.max_points) for _ in range(3)],
+            "gyro": [np.zeros(self.max_points) for _ in range(3)],
+            "mag": [np.zeros(self.max_points) for _ in range(3)]
+        }
+        self.encoder_data = [np.zeros(self.max_points) for _ in range(4)]
 
         self.setup_ui()
         
@@ -35,13 +44,6 @@ class SerialVisualizer(QMainWindow):
         self.port_timer.timeout.connect(self.update_ports)
         self.port_timer.start(2000)
         self.update_ports()
-
-        # Data storage for plots
-        self.max_points = 100
-        self.imu_data = {
-            "acc": [np.zeros(self.max_points) for _ in range(3)],
-            "gyro": [np.zeros(self.max_points) for _ in range(3)]
-        }
 
     def setup_ui(self):
         central_widget = QWidget()
@@ -64,7 +66,19 @@ class SerialVisualizer(QMainWindow):
         conn_layout.addWidget(self.connect_btn)
         main_layout.addWidget(conn_group)
 
-        # --- Dashboard Row ---
+        # --- Tab Widget ---
+        self.tabs = QTabWidget()
+        main_layout.addWidget(self.tabs)
+
+        self.setup_raw_data_tab()
+        self.setup_graphs_tab()
+
+    def setup_raw_data_tab(self):
+        raw_tab = QWidget()
+        self.tabs.addTab(raw_tab, "Raw Data")
+        layout = QVBoxLayout(raw_tab)
+
+        # Dashboard Area
         dash_layout = QHBoxLayout()
         
         # Machine Info
@@ -91,32 +105,27 @@ class SerialVisualizer(QMainWindow):
             enc_grid.addWidget(self.lbl_encs[i], i // 2, (i % 2) * 2 + 1)
         dash_layout.addWidget(enc_group)
         
-        main_layout.addLayout(dash_layout)
+        layout.addLayout(dash_layout)
 
-        # --- Graphs Row ---
-        graph_layout = QHBoxLayout()
+        # IMU Raw values
+        imu_group = QGroupBox("IMU Raw Data")
+        imu_grid = QGridLayout(imu_group)
+        self.lbl_acc = [QLabel("0.00") for _ in range(3)]
+        self.lbl_gyro = [QLabel("0.00") for _ in range(3)]
+        self.lbl_mag = [QLabel("0.00") for _ in range(3)]
         
-        self.acc_plot = pg.PlotWidget(title="Accelerometer (m/s²)")
-        self.acc_plot.addLegend()
-        self.acc_curves = [
-            self.acc_plot.plot(pen='r', name='X'),
-            self.acc_plot.plot(pen='g', name='Y'),
-            self.acc_plot.plot(pen='b', name='Z')
-        ]
+        imu_grid.addWidget(QLabel("Accelerometer (X,Y,Z):"), 0, 0)
+        for i in range(3): imu_grid.addWidget(self.lbl_acc[i], 0, i+1)
         
-        self.gyro_plot = pg.PlotWidget(title="Gyroscope (deg/s)")
-        self.gyro_plot.addLegend()
-        self.gyro_curves = [
-            self.gyro_plot.plot(pen='r', name='X'),
-            self.gyro_plot.plot(pen='g', name='Y'),
-            self.gyro_plot.plot(pen='b', name='Z')
-        ]
+        imu_grid.addWidget(QLabel("Gyroscope (X,Y,Z):"), 1, 0)
+        for i in range(3): imu_grid.addWidget(self.lbl_gyro[i], 1, i+1)
         
-        graph_layout.addWidget(self.acc_plot)
-        graph_layout.addWidget(self.gyro_plot)
-        main_layout.addLayout(graph_layout)
+        imu_grid.addWidget(QLabel("Magnetometer (X,Y,Z):"), 2, 0)
+        for i in range(3): imu_grid.addWidget(self.lbl_mag[i], 2, i+1)
+        
+        layout.addWidget(imu_group)
 
-        # --- Control Row ---
+        # Control Row
         ctrl_group = QGroupBox("Control")
         ctrl_main_layout = QHBoxLayout(ctrl_group)
         
@@ -142,7 +151,47 @@ class SerialVisualizer(QMainWindow):
         mode_layout.addWidget(btn_estop)
         ctrl_main_layout.addLayout(mode_layout)
 
-        main_layout.addWidget(ctrl_group)
+        layout.addWidget(ctrl_group)
+        layout.addStretch()
+
+    def setup_graphs_tab(self):
+        graph_tab = QWidget()
+        self.tabs.addTab(graph_tab, "Graphs")
+        layout = QGridLayout(graph_tab)
+
+        # Acc Plot
+        self.acc_plot = pg.PlotWidget(title="Accelerometer (m/s²)")
+        self.acc_plot.addLegend()
+        self.acc_curves = [self.acc_plot.plot(pen='r', name='X'),
+                           self.acc_plot.plot(pen='g', name='Y'),
+                           self.acc_plot.plot(pen='b', name='Z')]
+        
+        # Gyro Plot
+        self.gyro_plot = pg.PlotWidget(title="Gyroscope (deg/s)")
+        self.gyro_plot.addLegend()
+        self.gyro_curves = [self.gyro_plot.plot(pen='r', name='X'),
+                            self.gyro_plot.plot(pen='g', name='Y'),
+                            self.gyro_plot.plot(pen='b', name='Z')]
+        
+        # Mag Plot
+        self.mag_plot = pg.PlotWidget(title="Magnetometer (uT)")
+        self.mag_plot.addLegend()
+        self.mag_curves = [self.mag_plot.plot(pen='r', name='X'),
+                           self.mag_plot.plot(pen='g', name='Y'),
+                           self.mag_plot.plot(pen='b', name='Z')]
+        
+        # Encoder Plot
+        self.enc_plot = pg.PlotWidget(title="Encoders (Ticks)")
+        self.enc_plot.addLegend()
+        self.enc_curves = [self.enc_plot.plot(pen='r', name='FL'),
+                           self.enc_plot.plot(pen='g', name='FR'),
+                           self.enc_plot.plot(pen='b', name='BL'),
+                           self.enc_plot.plot(pen='y', name='BR')]
+
+        layout.addWidget(self.acc_plot, 0, 0)
+        layout.addWidget(self.gyro_plot, 0, 1)
+        layout.addWidget(self.mag_plot, 1, 0)
+        layout.addWidget(self.enc_plot, 1, 1)
 
     def update_ports(self):
         current_port = self.port_combo.currentText()
@@ -195,8 +244,6 @@ class SerialVisualizer(QMainWindow):
                 self.lbl_state.setText(states[info["state"]] if info["state"] < len(states) else str(info["state"]))
                 self.lbl_mode.setText(modes[info["mode"]] if info["mode"] < len(modes) else str(info["mode"]))
                 self.lbl_moving.setText("YES" if info["moving"] else "NO")
-                
-                # Update E-Stop color
                 if info["state"] == 3: # E_STOP
                     self.lbl_state.setStyleSheet("color: red; font-weight: bold;")
                 else:
@@ -206,19 +253,33 @@ class SerialVisualizer(QMainWindow):
             imu = parse_imu(payload)
             if imu:
                 for i in range(3):
+                    # Update Acc
                     self.imu_data["acc"][i] = np.roll(self.imu_data["acc"][i], -1)
                     self.imu_data["acc"][i][-1] = imu["acc"][i]
                     self.acc_curves[i].setData(self.imu_data["acc"][i])
+                    self.lbl_acc[i].setText(f"{imu['acc'][i]:.2f}")
                     
+                    # Update Gyro
                     self.imu_data["gyro"][i] = np.roll(self.imu_data["gyro"][i], -1)
                     self.imu_data["gyro"][i][-1] = imu["gyro"][i]
                     self.gyro_curves[i].setData(self.imu_data["gyro"][i])
+                    self.lbl_gyro[i].setText(f"{imu['gyro'][i]:.2f}")
+
+                    # Update Mag
+                    self.imu_data["mag"][i] = np.roll(self.imu_data["mag"][i], -1)
+                    self.imu_data["mag"][i][-1] = imu["mag"][i]
+                    self.mag_curves[i].setData(self.imu_data["mag"][i])
+                    self.lbl_mag[i].setText(f"{imu['mag'][i]:.2f}")
 
         elif topic_id == self.protocol.TOPIC_PUB_ENCODER:
             encoders = parse_encoder(payload)
             if encoders:
                 for i in range(min(len(encoders), 4)):
                     self.lbl_encs[i].setText(str(encoders[i]))
+                    # Update Encoder Plots
+                    self.encoder_data[i] = np.roll(self.encoder_data[i], -1)
+                    self.encoder_data[i][-1] = encoders[i]
+                    self.enc_curves[i].setData(self.encoder_data[i])
 
     def send_velocity(self):
         if not self.serial_port or not self.serial_port.is_open:
@@ -232,9 +293,6 @@ class SerialVisualizer(QMainWindow):
     def toggle_mode_cmd(self):
         if not self.serial_port or not self.serial_port.is_open:
             return
-        # We don't know the current mode for sure until we receive info, 
-        # but we can try to send a "switch" or just pick one.
-        # Let's toggle based on the label.
         new_mode = 1 if self.lbl_mode.text() == "MANUAL" else 0
         data = pack_enum(new_mode)
         frame = self.protocol.pack(self.protocol.TOPIC_SUB_OPERATION_MODE, data)
@@ -243,7 +301,6 @@ class SerialVisualizer(QMainWindow):
     def send_estop(self):
         if not self.serial_port or not self.serial_port.is_open:
             return
-        # system_state_t: E_STOP is usually 3
         data = pack_enum(3)
         frame = self.protocol.pack(self.protocol.TOPIC_SUB_OPERATION_RUN, data)
         self.serial_port.write(frame)

@@ -6,14 +6,12 @@
 #include "cmsis_os2.h"
 #include "motor.h"
 
-#ifndef APP_DEBUG_ENABLED
-#define APP_DEBUG_ENABLED 1
-#endif
+#define APP_DEBUG_ENABLED 0
 
 // ROS PUBLISH TIME CONFIG
-#define TIME_ENCODER_PUBLISH_MS 20            //50 Hz    
-#define TIME_IMU_PUBLISH_MS 10                //100 Hz
-#define TIME_CURRENT_STATE_PUBLISH_MS 1000    //1s
+#define TIME_ENCODER_PUBLISH_MS 20           //50Hz    
+#define TIME_IMU_PUBLISH_MS 20               //50Hz
+#define TIME_CURRENT_STATE_PUBLISH_MS 1000   //1s
 
 // LOG DEBUG FOR PUBLISH
 #define TIME_LOG_DEBUG_ENCODER_MS 1000
@@ -25,6 +23,7 @@
 
 //IMU CONFIG
 #define IMU_USE_DEBUG true
+#define TIME_IMU_UPDATE_MS 10                   //100Hz (Internal update rate)
 
 // MOTOR CONFIG
 #define MOTOR_ID_1 0
