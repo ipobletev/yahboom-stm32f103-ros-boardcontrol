@@ -17,6 +17,8 @@ void AppEncoderTask(void *argument) {
     _motor_bl.id = APP_MOTOR_ID_3;
     _motor_br.id = APP_MOTOR_ID_4;
 
+    uint32_t _last_wake_time = osKernelGetTickCount();
+
     while (1) {
         
         //Get encoders
@@ -44,6 +46,8 @@ void AppEncoderTask(void *argument) {
                 (long)_enc_fl, (long)_enc_fr, (long)_enc_bl, (long)_enc_br);
         }
 
-        osDelay(TIME_ENCODER_PUBLISH_MS);
+        // Precise delay
+        _last_wake_time += TIME_ENCODER_PUBLISH_MS;
+        osDelayUntil(_last_wake_time);
     }
 }

@@ -12,7 +12,7 @@ void serial_ros_bsp_init(void);
 /**
  * @brief Send raw bytes over the serial interface.
  */
-void serial_ros_bsp_send(const uint8_t *data, uint16_t length);
+bool serial_ros_bsp_send(const uint8_t *data, uint16_t length);
 
 /**
  * @brief Read a single byte from the serial interface (non-blocking).

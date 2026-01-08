@@ -10,8 +10,11 @@ void serial_ros_bsp_init(void) {
     HAL_UART_Receive_DMA(&huart1, dma_rx_buffer, DMA_RX_BUFFER_SIZE);
 }
 
-void serial_ros_bsp_send(const uint8_t *data, uint16_t length) {
-    HAL_UART_Transmit_DMA(&huart1, (uint8_t*)data, length);
+bool serial_ros_bsp_send(const uint8_t *data, uint16_t length) {
+    if (HAL_UART_Transmit_DMA(&huart1, (uint8_t*)data, length) == HAL_OK) {
+        return true;
+    }
+    return false;
 }
 
 bool serial_ros_bsp_read_byte(uint8_t *byte) {

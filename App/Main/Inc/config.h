@@ -2,9 +2,9 @@
 #define TIMEOUT_LAST_CMD_MS 250
 
 // ROS PUBLISH TIME CONFIG
-#define TIME_ENCODER_PUBLISH_MS         50              //20Hz    
-#define TIME_IMU_PUBLISH_MS             50              //20Hz
-#define TIME_MACHINE_INFO_PUBLISH_MS    200             //5Hz
+#define TIME_ENCODER_PUBLISH_MS         100              //10Hz    
+#define TIME_IMU_PUBLISH_MS             10               //100Hz
+#define TIME_MACHINE_INFO_PUBLISH_MS    250              //4Hz
 
 // LOG DEBUG FOR PUBLISH
 #define TIME_LOG_DEBUG_ENCODER_MS 1000
@@ -85,5 +85,5 @@
 #define APP_USE_HARDWARE_ERROR // If is enabled, the system will stop (EMERGENCY STOP) if a hardware error is detected (global_system_error != 0)
 
 // DEBUG CONFIG
-#define APP_DEBUG_ENABLED                 // Enable debug messages
-#define APP_DISABLE_SERIAL_ROS_PUBLISHERS // DISABLE SERIAL ROS PUBLISHERS ONLY FOR DEVELOPMENT!!!!!!!
+// #define APP_DEBUG_ENABLED                 // Enable debug messages
+// #define APP_DISABLE_SERIAL_ROS_PUBLISHERS // DISABLE SERIAL ROS PUBLISHERS ONLY FOR DEVELOPMENT!!!!!!!

@@ -2,6 +2,8 @@
 #include <string.h>
 #include "bsp_serial_ros.h"
 #include "config.h"
+#include "cmsis_os2.h"
+
 
 typedef enum {
     STATE_WAIT_H1,
@@ -104,7 +106,13 @@ void serial_ros_publish(uint8_t topic_id, const void *payload, uint8_t length) {
     memset(buffer, 0, sizeof(buffer));
     uint16_t total_len = serial_ros_pack(topic_id, (const uint8_t*)payload, length, buffer);
     if (total_len > 0) {
-        serial_ros_bsp_send(buffer, total_len);
+        // Retry mechanism in case UART is busy (e.g. DMA busy)
+        for (int i = 0; i < 5; i++) {
+            if (serial_ros_bsp_send(buffer, total_len)) {
+                break;
+            }
+            osDelay(1); 
+        }
     }
     #endif
 }
