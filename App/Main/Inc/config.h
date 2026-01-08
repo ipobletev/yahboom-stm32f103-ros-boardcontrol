@@ -1,5 +1,6 @@
 // DEBUG CONFIG
-#define APP_DEBUG_ENABLED 0
+#define APP_DEBUG_ENABLED 1
+
 #define APP_USE_HARDWARE_ERROR 0 // If hardware error is enabled, the system will stop (EMERGENCY STOP) if a hardware error is detected
 
 // TIMEOUT CONFIG FOR CMD VEL. If no new command is received for this time, the motors will stop

@@ -7,7 +7,7 @@
 #define __APP_DEBUG_H__
 
 #include <stdio.h>
-#include "global.h"
+#include "config.h"
 
 /**
  * @brief Master switch to enable/disable all debug output.
