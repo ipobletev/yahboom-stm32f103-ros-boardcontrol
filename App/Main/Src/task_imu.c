@@ -1,3 +1,4 @@
+#include "app_errors.h"
 #include "global.h"
 #include "task_imu.h"
 #include "app_debug.h"
@@ -33,11 +34,13 @@ void AppIMUTask(void *argument) {
             if (!imu_init(IMU_INIT_RETRIES, IMU_USE_DEBUG)) {
                 APP_DEBUG_ERROR("IMU", "IMU Reinitialization failed!");
                 imu_was_ok = false;
+                global_system_error |= SYS_ERROR_IMU_INIT;
             }else{
                 APP_DEBUG_INFO("IMU", "IMU Reinitialization successful!");
                 imu_was_ok = true;
+                global_system_error &= SYS_ERROR_NONE;
             }
-            global_system_error &= ~SYS_ERROR_IMU_INIT;
+            
         }
 
         // Update IMU (always at loop rate)

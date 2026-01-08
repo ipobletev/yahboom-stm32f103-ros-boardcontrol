@@ -50,7 +50,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/IO/Buzzer/Inc
     Drivers/BSP/motor/Inc
     Drivers/BSP/imu/icm20948/Inc
-    Drivers/BSP/imu/ak09916/Inc
     Drivers/BSP/led/Inc
     Drivers/BSP/buzzer/Inc
     Drivers/BSP/iwdg/Inc
@@ -74,7 +73,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/IO/Buzzer/Src/io_buzzer.c
     Drivers/BSP/motor/Src/bsp_motor.c
     Drivers/BSP/imu/icm20948/Src/icm20948.c
-    Drivers/BSP/imu/ak09916/Src/ak09916.c
     Drivers/BSP/led/Src/bsp_led.c
     Drivers/BSP/buzzer/Src/bsp_buzzer.c
     Drivers/BSP/iwdg/Src/bsp_iwdg.c
