@@ -107,7 +107,7 @@ void serial_ros_publish(uint8_t topic_id, const void *payload, uint8_t length) {
     uint16_t total_len = serial_ros_pack(topic_id, (const uint8_t*)payload, length, buffer);
     if (total_len > 0) {
         // Retry mechanism in case UART is busy (e.g. DMA busy)
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 20; i++) {
             if (serial_ros_bsp_send(buffer, total_len)) {
                 break;
             }

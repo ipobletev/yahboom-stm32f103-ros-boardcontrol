@@ -7,6 +7,7 @@
 
 
 #include "icm20948.h"
+#include "cmsis_os2.h"
 
 
 static float gyro_scale_factor;
@@ -91,17 +92,22 @@ bool ak09916_mag_read(axises* data)
 	uint8_t* temp;
 	uint8_t drdy, hofl;	// data ready, overflow
 
-	drdy = read_single_ak09916_reg(MAG_ST1) & 0x01;
+    // Optimisation: Burst read 9 bytes from MAG_ST1 (0x10) to MAG_ST2 (0x18)
+    // 0: ST1
+    // 1-6: HXL, HXH, HYL, HYH, HZL, HZH
+    // 7: Reserved (0x17)
+    // 8: ST2
+	temp = read_multiple_ak09916_reg(MAG_ST1, 9);
+
+    drdy = temp[0] & 0x01;
 	if(!drdy)	return false;
 
-	temp = read_multiple_ak09916_reg(MAG_HXL, 6);
-
-	hofl = read_single_ak09916_reg(MAG_ST2) & 0x08;
+	hofl = temp[8] & 0x08;
 	if(hofl)	return false;
 
-	data->x = (int16_t)(temp[1] << 8 | temp[0]);
-	data->y = (int16_t)(temp[3] << 8 | temp[2]);
-	data->z = (int16_t)(temp[5] << 8 | temp[4]);
+	data->x = (int16_t)(temp[2] << 8 | temp[1]);
+	data->y = (int16_t)(temp[4] << 8 | temp[3]);
+	data->z = (int16_t)(temp[6] << 8 | temp[5]);
 
 	return true;
 }
@@ -162,13 +168,13 @@ bool ak09916_who_am_i()
 void icm20948_device_reset()
 {
 	write_single_icm20948_reg(ub_0, B0_PWR_MGMT_1, 0x80 | 0x41);
-	HAL_Delay(100);
+	osDelay(100);
 }
 
 void ak09916_soft_reset()
 {
 	write_single_ak09916_reg(MAG_CNTL3, 0x01);
-	HAL_Delay(100);
+	osDelay(100);
 }
 
 void icm20948_wakeup()
@@ -177,7 +183,7 @@ void icm20948_wakeup()
 	new_val &= 0xBF;
 
 	write_single_icm20948_reg(ub_0, B0_PWR_MGMT_1, new_val);
-	HAL_Delay(100);
+	osDelay(100);
 }
 
 void icm20948_sleep()
@@ -186,7 +192,7 @@ void icm20948_sleep()
 	new_val |= 0x40;
 
 	write_single_icm20948_reg(ub_0, B0_PWR_MGMT_1, new_val);
-	HAL_Delay(100);
+	osDelay(100);
 }
 
 void icm20948_spi_slave_enable()
@@ -211,7 +217,7 @@ void icm20948_i2c_master_enable()
 	new_val |= 0x20;
 
 	write_single_icm20948_reg(ub_0, B0_USER_CTRL, new_val);
-	HAL_Delay(100);
+	osDelay(100);
 }
 
 void icm20948_i2c_master_clk_frq(uint8_t config)
@@ -268,7 +274,7 @@ void icm20948_accel_sample_rate_divider(uint16_t divider)
 void ak09916_operation_mode_setting(operation_mode mode)
 {
 	write_single_ak09916_reg(MAG_CNTL2, mode);
-	HAL_Delay(100);
+	osDelay(100);
 }
 
 void icm20948_gyro_calibration()
@@ -468,7 +474,7 @@ static void write_single_icm20948_reg(userbank ub, uint8_t reg, uint8_t val)
 static uint8_t* read_multiple_icm20948_reg(userbank ub, uint8_t reg, uint8_t len)
 {
 	uint8_t read_reg = READ | reg;
-	static uint8_t reg_val[6];
+	static uint8_t reg_val[12];
 	select_user_bank(ub);
 
 	cs_low();
@@ -496,7 +502,7 @@ static uint8_t read_single_ak09916_reg(uint8_t reg)
 	write_single_icm20948_reg(ub_3, B3_I2C_SLV0_REG, reg);
 	write_single_icm20948_reg(ub_3, B3_I2C_SLV0_CTRL, 0x81);
 
-	HAL_Delay(1);
+	osDelay(1);
 	return read_single_icm20948_reg(ub_0, B0_EXT_SLV_SENS_DATA_00);
 }
 
@@ -514,6 +520,6 @@ static uint8_t* read_multiple_ak09916_reg(uint8_t reg, uint8_t len)
 	write_single_icm20948_reg(ub_3, B3_I2C_SLV0_REG, reg);
 	write_single_icm20948_reg(ub_3, B3_I2C_SLV0_CTRL, 0x80 | len);
 
-	HAL_Delay(1);
+	osDelay(1);
 	return read_multiple_icm20948_reg(ub_0, B0_EXT_SLV_SENS_DATA_00, len);
 }

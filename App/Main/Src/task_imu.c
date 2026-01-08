@@ -24,6 +24,8 @@ void AppIMUTask(void *argument) {
         imu_was_ok = false;
     }
 
+    uint32_t _last_wake_time = osKernelGetTickCount();
+
     while (1) {
         uint32_t now = osKernelGetTickCount();
 
@@ -73,6 +75,8 @@ void AppIMUTask(void *argument) {
                     imu_raw.mag[0], imu_raw.mag[1], imu_raw.mag[2]);
         }
 
-        osDelay(TIME_IMU_UPDATE_MS); // 100Hz internal update
+        // Precise delay
+        _last_wake_time += TIME_IMU_UPDATE_MS;
+        osDelayUntil(_last_wake_time);
     }
 }
