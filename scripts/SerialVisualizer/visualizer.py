@@ -4,14 +4,18 @@ import serial.tools.list_ports
 import struct
 import threading
 import time
+from datetime import datetime
 import csv
 import os
+import math
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QComboBox, QPushButton, 
                              QGridLayout, QGroupBox, QDoubleSpinBox, QTabWidget,
-                             QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog)
+                             QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog,
+                             QLineEdit, QScrollArea, QCheckBox, QProgressBar) # Added QLineEdit, QScrollArea, QCheckBox
 from PySide6.QtCore import QTimer, Qt, Signal, Slot
 import pyqtgraph as pg
+import pyqtgraph.opengl as gl # Added pyqtgraph.opengl
 import numpy as np
 
 from serial_ros import (SerialRosProtocol, parse_machine_info, parse_imu, 
@@ -70,6 +74,17 @@ class SerialVisualizer(QMainWindow):
         self.is_recording = False
         self.recorded_data = [] # List of dicts
         self.recording_start_time = 0
+        
+        # Cache for 3D view data
+        self.current_data_cache = {}
+        
+        # Playback
+        self.playback_data = [] # List of dicts
+        self.playback_index = 0
+        self.is_playing = False
+        self.playback_timer = QTimer()
+        self.playback_timer.timeout.connect(self.update_playback)
+        self.playback_interval = 50 # ms
 
         self.setup_ui()
         
@@ -121,6 +136,10 @@ class SerialVisualizer(QMainWindow):
         self.setup_raw_data_tab()
         self.setup_graphs_tab()
         self.setup_status_tab()
+        
+        # 3D View Tab
+        self.view_3d_tab = self.create_3d_view_tab()
+        self.tabs.addTab(self.view_3d_tab, "3D Orientation")
 
     def setup_status_tab(self):
         status_tab = QWidget()
@@ -295,6 +314,33 @@ class SerialVisualizer(QMainWindow):
         rec_layout.addLayout(info_rec_layout)
         
         layout.addWidget(rec_group)
+
+        # Playback Control
+        play_group = QGroupBox("Data Playback")
+        play_layout = QGridLayout(play_group)
+        
+        self.btn_load_csv = QPushButton("Load CSV")
+        self.btn_load_csv.clicked.connect(self.load_csv_playback)
+        self.lbl_loaded_file = QLabel("No file loaded")
+        self.lbl_loaded_file.setStyleSheet("color: gray; font-style: italic;")
+        
+        self.btn_play_pause = QPushButton("Play")
+        self.btn_play_pause.clicked.connect(self.toggle_playback)
+        self.btn_play_pause.setEnabled(False)
+        
+        self.chk_loop = QCheckBox("Loop Playback")
+        
+        self.play_progress = QProgressBar()
+        self.play_progress.setValue(0)
+        self.play_progress.setFormat("%p%")
+
+        play_layout.addWidget(self.btn_load_csv, 0, 0)
+        play_layout.addWidget(self.lbl_loaded_file, 0, 1)
+        play_layout.addWidget(self.btn_play_pause, 1, 0)
+        play_layout.addWidget(self.chk_loop, 1, 1)
+        play_layout.addWidget(self.play_progress, 2, 0, 1, 2)
+        
+        layout.addWidget(play_group)
         layout.addStretch()
 
     def setup_graphs_tab(self):
@@ -379,6 +425,10 @@ class SerialVisualizer(QMainWindow):
 
     @Slot(int, bytes)
     def handle_data(self, topic_id, payload):
+        # Prevent update if playback is active
+        if hasattr(self, 'is_playing') and self.is_playing:
+            return
+
         # Update statistics
         if topic_id in self.topic_stats:
             self.topic_stats[topic_id]["count"] += 1
@@ -413,7 +463,9 @@ class SerialVisualizer(QMainWindow):
                     "error": info["error_code"],
                     "roll": info["roll"],
                     "pitch": info["pitch"],
-                    "velocity": info["velocity"]
+                    "velocity": info["velocity"],
+                    "battery": info["battery"],
+                    "temperature": info["temperature"]
                 })
                 states = ["IDLE", "MOVING", "TEMP_STOP", "E_STOP"]
                 modes = ["MANUAL", "AUTONOMOUS"]
@@ -488,6 +540,9 @@ class SerialVisualizer(QMainWindow):
                     "gyro_x": imu["gyro"][0], "gyro_y": imu["gyro"][1], "gyro_z": imu["gyro"][2],
                     "mag_x": imu["mag"][0], "mag_y": imu["mag"][1], "mag_z": imu["mag"][2]
                 })
+                # Update 3D view
+                if hasattr(self, 'update_3d_view'):
+                    self.update_3d_view()
 
         elif topic_id == self.protocol.TOPIC_PUB_ENCODER:
             encoders = parse_encoder(payload)
@@ -569,7 +624,8 @@ class SerialVisualizer(QMainWindow):
                 self.save_recording_to_csv()
 
     def save_recording_to_csv(self):
-        filename, _ = QFileDialog.getSaveFileName(self, "Save Data Recording", "session_log.csv", "CSV Files (*.csv)")
+        default_name = f"session_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        filename, _ = QFileDialog.getSaveFileName(self, "Save Data Recording", default_name, "CSV Files (*.csv)")
         if filename:
             try:
                 with open(filename, 'w', newline='') as f:
@@ -583,6 +639,150 @@ class SerialVisualizer(QMainWindow):
                 print(f"Error saving CSV: {e}")
         self.recorded_data = []
         self.lbl_rec_count.setText("Samples: 0")
+
+    def update_graphs(self):
+        # Update Acc/Gyro/Mag from current_data_cache
+        ax = self.current_data_cache.get("acc_x", 0)
+        ay = self.current_data_cache.get("acc_y", 0)
+        az = self.current_data_cache.get("acc_z", 0)
+        gx = self.current_data_cache.get("gyro_x", 0)
+        gy = self.current_data_cache.get("gyro_y", 0)
+        gz = self.current_data_cache.get("gyro_z", 0)
+        mx = self.current_data_cache.get("mag_x", 0)
+        my = self.current_data_cache.get("mag_y", 0)
+        mz = self.current_data_cache.get("mag_z", 0)
+        
+        # Helper to update arrays
+        for arr, val in [(self.imu_data["acc"], [ax, ay, az]),
+                         (self.imu_data["gyro"], [gx, gy, gz]),
+                         (self.imu_data["mag"], [mx, my, mz])]:
+            for i in range(3):
+                arr[i] = np.roll(arr[i], -1)
+                arr[i][-1] = val[i]
+                
+        # Helper to update curves
+        for i in range(3):
+            self.acc_curves[i].setData(self.imu_data["acc"][i])
+            self.gyro_curves[i].setData(self.imu_data["gyro"][i])
+            self.mag_curves[i].setData(self.imu_data["mag"][i])
+            
+            self.lbl_acc[i].setText(f"{self.current_data_cache.get('acc_x' if i==0 else 'acc_y' if i==1 else 'acc_z', 0):.2f}")
+            self.lbl_gyro[i].setText(f"{self.current_data_cache.get('gyro_x' if i==0 else 'gyro_y' if i==1 else 'gyro_z', 0):.2f}")
+            self.lbl_mag[i].setText(f"{self.current_data_cache.get('mag_x' if i==0 else 'mag_y' if i==1 else 'mag_z', 0):.2f}")
+
+    def load_csv_playback(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Open CSV Recording", "", "CSV Files (*.csv)")
+        if filename:
+            try:
+                with open(filename, 'r') as f:
+                    reader = csv.DictReader(f)
+                    self.playback_data = []
+                    for row in reader:
+                        # Convert values to numbers
+                        new_row = {}
+                        for k, v in row.items():
+                            try:
+                                new_row[k] = float(v)
+                            except:
+                                new_row[k] = v
+                        self.playback_data.append(new_row)
+                        
+                if self.playback_data:
+                    self.lbl_loaded_file.setText(os.path.basename(filename))
+                    self.btn_play_pause.setEnabled(True)
+                    self.playback_index = 0
+                    print(f"Loaded {len(self.playback_data)} samples.")
+            except Exception as e:
+                print(f"Error loading CSV: {e}")
+
+    def toggle_playback(self):
+        if not self.is_playing:
+            if not self.playback_data:
+                return
+            
+            # Auto-disconnect if connected
+            if self.running:
+                print("Auto-disconnecting serial for playback...")
+                self.toggle_connect()
+
+            self.is_playing = True
+            self.btn_play_pause.setText("Pause")
+            self.playback_timer.start(self.playback_interval)
+            
+            # If start from beginning
+            if self.playback_index >= len(self.playback_data):
+                self.playback_index = 0
+        else:
+            self.is_playing = False
+            self.btn_play_pause.setText("Play")
+            self.playback_timer.stop()
+
+    def update_playback(self):
+        if not self.playback_data:
+            return
+            
+        if self.playback_index >= len(self.playback_data):
+            if self.chk_loop.isChecked():
+                self.playback_index = 0
+            else:
+                self.toggle_playback() # Stop
+                return
+        
+        row = self.playback_data[self.playback_index]
+        self.playback_index += 1
+        
+        # Update Progress Bar
+        progress = int((self.playback_index / len(self.playback_data)) * 100)
+        self.play_progress.setValue(progress)
+        
+        # Update cache
+        self.current_data_cache.update(row)
+        
+        # Update UI Elements manually
+        # Machine Info
+        states = ["IDLE", "MOVING", "TEMP_STOP", "E_STOP"]
+        modes = ["MANUAL", "AUTONOMOUS"]
+        
+        state = int(row.get("state", 0))
+        mode = int(row.get("mode", 0))
+        
+        self.lbl_state.setText(states[state] if state < len(states) else str(state))
+        self.lbl_mode.setText(modes[mode] if mode < len(modes) else str(mode))
+        
+        wheels = int(row.get("wheels", 0))
+        spatial = int(row.get("spatial", 0))
+        self.lbl_moving_wheels.setText("YES" if wheels else "NO")
+        self.lbl_moving_spatial.setText("YES" if spatial else "NO")
+        
+        self.lbl_moving_wheels.setStyleSheet("color: lime; font-weight: bold;" if wheels else "color: gray;")
+        self.lbl_moving_spatial.setStyleSheet("color: orange; font-weight: bold;" if spatial else "color: gray;")
+        
+        self.lbl_roll.setText(f"{row.get('roll', 0):.1f}°")
+        self.lbl_pitch.setText(f"{row.get('pitch', 0):.1f}°")
+        self.lbl_velocity.setText(f"{row.get('velocity', 0):.2f} m/s")
+        self.lbl_battery.setText(f"{row.get('battery', 0):.2f} V")
+        self.lbl_temperature.setText(f"{row.get('temperature', 0):.1f} °C")
+        
+        err = int(row.get("error", 0))
+        self.lbl_error_code.setText(f"0x{err:08X}")
+        self.lbl_error_code.setStyleSheet("color: red; font-weight: bold;" if err != 0 else "color: gray;")
+        
+        # Update Encoders Labels
+        encs = [int(float(row.get(k, 0))) for k in ["enc_fl", "enc_fr", "enc_bl", "enc_br"]]
+        for i, val in enumerate(encs):
+            self.lbl_encs[i].setText(str(val))
+            # Plots update
+            self.encoder_data[i] = np.roll(self.encoder_data[i], -1)
+            self.encoder_data[i][-1] = val
+            self.enc_curves[i].setData(self.encoder_data[i])
+
+        # Update Graphs logic (Acc/Gyro/Mag) - Reuse update_graphs?
+        # update_graphs reads from current_data_cache, so just call it
+        self.update_graphs()
+        
+        # Update 3D View
+        if hasattr(self, 'update_3d_view'):
+            self.update_3d_view()
 
     def refresh_topic_stats(self):
         now = time.time()
@@ -639,6 +839,76 @@ class SerialVisualizer(QMainWindow):
             status_item.setForeground(Qt.gray)
             code_item.setBackground(Qt.transparent)
             code_item.setForeground(Qt.gray)
+
+    def create_3d_view_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        self.gl_view = gl.GLViewWidget()
+        self.gl_view.opts['distance'] = 40
+        self.gl_view.setWindowTitle('3D Orientation')
+        
+        # Grid
+        g = gl.GLGridItem()
+        g.scale(2,2,1)
+        self.gl_view.addItem(g)
+        
+        # Axis
+        axis = gl.GLAxisItem()
+        axis.setSize(10,10,10)
+        self.gl_view.addItem(axis)
+        
+        # Board representation (Box)
+        # Dimensions approx: 10cm x 6cm x 1cm -> 10, 6, 1 units
+        self.board_box = gl.GLBoxItem(size=pg.Vector(10, 6, 1), color=(200, 200, 200, 255))
+        self.board_box.translate(-5, -3, 0) # Center the box
+        self.gl_view.addItem(self.board_box)
+        
+        layout.addWidget(self.gl_view)
+        
+        # Info label
+        self.lbl_3d_info = QLabel("R: 0.0 P: 0.0 Y: 0.0")
+        layout.addWidget(self.lbl_3d_info)
+        
+        widget.setLayout(layout)
+        return widget
+
+    def update_3d_view(self):
+        # Calculate RPY from IMU data
+        ax = self.current_data_cache.get("acc_x", 0)
+        ay = self.current_data_cache.get("acc_y", 0)
+        az = self.current_data_cache.get("acc_z", 0)
+        
+        # Simple Roll/Pitch from Acc
+        # Roll = atan2(ay, az)
+        # Pitch = atan2(-ax, sqrt(ay*ay + az*az))
+        roll = math.atan2(ay, az) * 57.2958
+        pitch = math.atan2(-ax, math.sqrt(ay*ay + az*az)) * 57.2958
+        
+        # Yaw from Mag (Tilt compensated)
+        mx = self.current_data_cache.get("mag_x", 0)
+        my = self.current_data_cache.get("mag_y", 0)
+        mz = self.current_data_cache.get("mag_z", 0)
+        
+        roll_rad = math.radians(roll)
+        pitch_rad = math.radians(pitch)
+        
+        # Simple tilt compensation
+        by = my * math.cos(roll_rad) - mz * math.sin(roll_rad)
+        bx = mx * math.cos(pitch_rad) + my * math.sin(pitch_rad) * math.sin(roll_rad) + mz * math.sin(pitch_rad) * math.cos(roll_rad)
+        
+        yaw = math.atan2(-by, bx) * 57.2958
+        
+        self.lbl_3d_info.setText(f"R: {roll:.1f} P: {pitch:.1f} Y: {yaw:.1f}")
+        
+        # Update transform
+        tr = pg.Transform3D()
+        tr.rotate(yaw, 0, 0, 1)
+        tr.rotate(pitch, 0, 1, 0)
+        tr.rotate(roll, 1, 0, 0)
+        
+        # Reset and apply
+        self.board_box.setTransform(tr)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

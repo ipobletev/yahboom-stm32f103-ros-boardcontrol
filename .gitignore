@@ -4,7 +4,8 @@ build
 # Python Scripts
 .venv
 __pycache__
-
+session_log_*
+)
 # Prerequisites
 *.d
 

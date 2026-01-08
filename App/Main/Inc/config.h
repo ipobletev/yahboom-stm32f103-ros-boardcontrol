@@ -6,9 +6,9 @@
 #define TIMEOUT_LAST_CMD_MS 250
 
 // ROS PUBLISH TIME CONFIG
-#define TIME_ENCODER_PUBLISH_MS         1000              //20Hz    
-#define TIME_IMU_PUBLISH_MS             1000            //100Hz
-#define TIME_MACHINE_INFO_PUBLISH_MS    1000           //1s
+#define TIME_ENCODER_PUBLISH_MS         50              //20Hz    
+#define TIME_IMU_PUBLISH_MS             50              //20Hz
+#define TIME_MACHINE_INFO_PUBLISH_MS    200             //5Hz
 
 // LOG DEBUG FOR PUBLISH
 #define TIME_LOG_DEBUG_ENCODER_MS 1000

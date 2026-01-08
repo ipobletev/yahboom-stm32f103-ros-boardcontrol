@@ -110,6 +110,21 @@ def parse_machine_info(data):
                 "battery": battery,
                 "temperature": temperature
             }
+        # Fallback for old firmware (24 bytes)
+        elif len(data) >= 24:
+            state, mode, wheels, spatial, error, roll, pitch, velocity, battery = struct.unpack("<BBBB I ffff", data[:24])
+            return {
+                "state": state, 
+                "mode": mode, 
+                "moving_wheels": bool(wheels),
+                "moving_spatial": bool(spatial),
+                "error_code": error,
+                "roll": roll,
+                "pitch": pitch,
+                "velocity": velocity,
+                "battery": battery,
+                "temperature": 0.0 # Default value
+            }
     except:
         pass
     return None
