@@ -10,11 +10,18 @@ https://www.yahboom.net/study/ROS-Driver-Board
 ## 🚀 Key Features
 
 ### Firmware (STM32)
-- **Motor Control**: Support for 4 motors with PID speed control.
-- **Sensor Integration**: IMU (ICM20948/AK09916) and quadrature encoder reading.
-- **SerialROS Protocol**: Robust and efficient communication using serial frames with checksum.
-- **State Management**: State system (IDLE, MOVING, E_STOP) with safety protections.
-- **Watchdog & Timeouts**: Automatic motor stop if communication is lost.
+- **RTOS Powered**: Built on **FreeRTOS** (CMSIS-RTOS2) for deterministic task scheduling.
+- **Motor Control**: Support for 4 DC motors with per-motor **PID speed control** and quadrature encoder feedback.
+- **Sensor Fusion**: Real-time reading of **ICM20948** (Accel/Gyro) and **AK09916** (Mag) with tilt compensation (Roll/Pitch calculation).
+- **Hardare Monitoring**: Integrated **ADC monitoring** for battery voltage and system temperature.
+- **SerialROS Protocol**: Binary protocol with **XOR Checksum** for low-latency, reliable PC-Board communication.
+- **Performance Optimized**: Uses **DMA (Direct Memory Access)** for serial reception to minimize CPU overhead.
+- **Safety First**:
+  - Multi-state machine (**IDLE, MOVING, EMERGENCY_STOP**).
+  - **Hardware Watchdog** (IWDG) to prevent system freezes.
+  - **Command Timeouts**: Automatic stop if the control signal is lost.
+  - **Hardware Error Hooks**: Immediate E-STOP on sensor or motor driver failure.
+- **User Interface**: Integrated support for status **LEDs**, **Buzzer** alerts, and user **Keys**.
 
 ### Visualization GUI (Python)
 - **Real-Time Dashboard**: Visualization of telemetry (acceleration, angular velocity, encoders).
