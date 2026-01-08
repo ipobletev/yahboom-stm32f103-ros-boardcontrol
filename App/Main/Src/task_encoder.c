@@ -35,7 +35,7 @@ void AppEncoderTask(void *argument) {
 
         // Publish encoders
         int32_t enc_data[4] = {_enc_fl, _enc_fr, _enc_bl, _enc_br};
-        serial_ros_publish(TOPIC_PUB_ENCODER, enc_data, sizeof(enc_data));
+        serial_ros_publish(TOPIC_ENCODER, enc_data, sizeof(enc_data));
         
         // // Status logging
         static uint32_t _last_log = 0;

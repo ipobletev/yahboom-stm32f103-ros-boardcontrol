@@ -61,16 +61,16 @@
 
 // SERIAL ROS TOPIC ID
 // Published topics
-#define TOPIC_PUB_MACHINE_INFO      0x01
-#define TOPIC_PUB_IMU               0x02
-#define TOPIC_PUB_ENCODER           0x03
+#define TOPIC_MACHINE_INFO      0x01
+#define TOPIC_IMU               0x02
+#define TOPIC_ENCODER           0x03
 // Subscribed topics
-#define TOPIC_SUB_CMD_VEL           0x04
-#define TOPIC_SUB_OPERATION_MODE    0x05
-#define TOPIC_SUB_OPERATION_RUN     0x06
-#define TOPIC_SUB_RESET_STOP_CMD    0x07
-#define TOPIC_SUB_ESTOP_CMD         0x08
-#define TOPIC_SUB_CONFIRM_CONN      0x0A
+#define TOPIC_CMD_VEL           0x04
+#define TOPIC_OPERATION_MODE    0x05
+#define TOPIC_OPERATION_RUN     0x06
+#define TOPIC_RESET_STOP_CMD    0x07
+#define TOPIC_ESTOP_CMD         0x08
+#define TOPIC_CONFIRM_CONN      0x0A
 
 // CONNECTION CONFIG
 #define CONN_TIMEOUT_MS             3000

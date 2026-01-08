@@ -66,7 +66,7 @@ void StatePubTimerCallback(void *argument)
     .temperature = bsp_adc_temperature_read(),
     .angular_velocity = (fabs(imu_raw.gyro[2]) > GYRO_THRESHOLD) ? imu_raw.gyro[2] : 0.0f
   };
-  serial_ros_publish(TOPIC_PUB_MACHINE_INFO, (uint8_t*)&payload, sizeof(payload));
+  serial_ros_publish(TOPIC_MACHINE_INFO, (uint8_t*)&payload, sizeof(payload));
   
   APP_DEBUG_INFO("MANAGER", "State: %d, Mode: %d, Moving (W:%d, S:%d), Error: %d, Roll: %.1f, Pitch: %.1f, Vel: %.2f, AngVel: %.2f, Bat: %.1fV, Temp: %.1fC\r\n", 
           payload.state, payload.mode, payload.is_moving_wheels, payload.is_moving_spatial, payload.error_code,

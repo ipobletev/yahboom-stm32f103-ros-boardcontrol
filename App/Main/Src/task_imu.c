@@ -56,7 +56,7 @@ void AppIMUTask(void *argument) {
             memset(&imu_raw, 0, sizeof(imu_data_t));
             imu_get_data(&imu_raw);
             
-            serial_ros_publish(TOPIC_PUB_IMU, &imu_raw, sizeof(imu_data_t));
+            serial_ros_publish(TOPIC_IMU, &imu_raw, sizeof(imu_data_t));
 
         }
 

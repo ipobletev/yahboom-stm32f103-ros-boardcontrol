@@ -28,13 +28,13 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
     APP_DEBUG_INFO("RECEIVER", "Received ROS frame: topic_id=%d, length=%d", topic_id, length);
 
     switch (topic_id) {
-        case TOPIC_SUB_CONFIRM_CONN:
+        case TOPIC_CONFIRM_CONN:
             // Connection ACK explicitly received
             last_conn_ack_tick = osKernelGetTickCount();
             global_system_error &= ~SYS_ERROR_SERIAL_TIMEOUT;
             APP_DEBUG_INFO("RECEIVER", "Connection ACK received");
             break;
-        case TOPIC_SUB_CMD_VEL:
+        case TOPIC_CMD_VEL:
             end_by_emergency_stop();
             end_by_manual_mode();
             // Only process ROS velocity commands if in AUTONOMOUS mode
@@ -54,7 +54,7 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
             }
             break;
 
-        case TOPIC_SUB_OPERATION_MODE:
+        case TOPIC_OPERATION_MODE:
             end_by_emergency_stop();
             if (length == 1) {
                 operation_mode_t new_mode = (operation_mode_t)payload[0];
@@ -73,7 +73,7 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
             }
             break;
 
-        case TOPIC_SUB_OPERATION_RUN:
+        case TOPIC_OPERATION_RUN:
             end_by_emergency_stop();
             end_by_manual_mode();
             if (length == 1) {
@@ -88,7 +88,7 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
             }
             break;
 
-        case TOPIC_SUB_RESET_STOP_CMD:
+        case TOPIC_RESET_STOP_CMD:
             if (length == 1) {
                 last_conn_ack_tick = osKernelGetTickCount();
                 global_system_error &= ~SYS_ERROR_SERIAL_TIMEOUT;
@@ -100,7 +100,7 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
             }
             break;
 
-        case TOPIC_SUB_ESTOP_CMD:
+        case TOPIC_ESTOP_CMD:
             end_by_emergency_stop();
             end_by_manual_mode();
             if (length == 1) {
