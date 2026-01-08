@@ -18,7 +18,7 @@ import pyqtgraph as pg
 import pyqtgraph.opengl as gl # Added pyqtgraph.opengl
 import numpy as np
 
-from serial_ros import (SerialRosProtocol, parse_machine_info, parse_imu, 
+from serial_ros import (SerialProtocol, parse_machine_info, parse_imu, 
                         parse_encoder, pack_cmd_vel, pack_enum)
 
 class SerialVisualizer(QMainWindow):
@@ -29,7 +29,7 @@ class SerialVisualizer(QMainWindow):
         self.setWindowTitle("STM32 Control Board Serial Visualizer")
         self.resize(1200, 900)
 
-        self.protocol = SerialRosProtocol()
+        self.protocol = SerialProtocol()
         self.serial_port = None
         self.running = False
 

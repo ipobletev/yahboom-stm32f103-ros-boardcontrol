@@ -1,6 +1,6 @@
 import struct
 
-class SerialRosProtocol:
+class SerialProtocol:
     HEADER1 = 0xAA
     HEADER2 = 0x55
     MAX_PAYLOAD = 64
