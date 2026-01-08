@@ -1,8 +1,3 @@
-// DEBUG CONFIG
-#define APP_DEBUG_ENABLED 1
-
-#define APP_USE_HARDWARE_ERROR 0 // If hardware error is enabled, the system will stop (EMERGENCY STOP) if a hardware error is detected
-
 // TIMEOUT CONFIG FOR CMD VEL. If no new command is received for this time, the motors will stop
 #define TIMEOUT_LAST_CMD_MS 250
 
@@ -85,3 +80,10 @@
 // ROBOT PHYSICAL PARAMS
 #define WHEEL_DIAMETER 0.080f   // 80mm
 #define ENCODER_PPR 1320.0f      // 11 ticks * 30 gear ratio * 4 quadrature ?? TODO: Verify
+
+// ERROR CONFIG
+#define APP_USE_HARDWARE_ERROR // If is enabled, the system will stop (EMERGENCY STOP) if a hardware error is detected (global_system_error != 0)
+
+// DEBUG CONFIG
+#define APP_DEBUG_ENABLED                 // Enable debug messages
+#define APP_DISABLE_SERIAL_ROS_PUBLISHERS // DISABLE SERIAL ROS PUBLISHERS ONLY FOR DEVELOPMENT!!!!!!!

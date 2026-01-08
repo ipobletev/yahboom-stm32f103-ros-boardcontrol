@@ -83,7 +83,6 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
             break;
 
         case TOPIC_SUB_RESET_STOP_CMD:
-            end_by_manual_mode();
             if (length == 1) {
                 system_msg_t msg = { 
                     .requested_state = STATE_TEMPORAL_STOP, 
@@ -154,7 +153,7 @@ void AppControllerTask(void *argument) {
 
         }
 
-        #if APP_USE_HARDWARE_ERROR == 1
+        #ifdef APP_USE_HARDWARE_ERROR
         // 2. Process hardware errors
         if (global_system_error != SYS_ERROR_NONE && current_state != STATE_EMERGENCY_STOP) {
             APP_DEBUG_ERROR("CONTROLLER", "Hardware error detected: 0x%08lX! Triggering E-STOP.", global_system_error);

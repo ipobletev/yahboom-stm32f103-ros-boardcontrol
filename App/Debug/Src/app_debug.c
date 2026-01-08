@@ -5,8 +5,9 @@
 
 #include "app_debug.h"
 #include <stdarg.h>
+#include "config.h"
 
-#if (APP_DEBUG_ENABLED == 1)
+#ifdef APP_DEBUG_ENABLED
 static const char* level_strings[] = {
     "Info",
     "Warn",
@@ -15,7 +16,7 @@ static const char* level_strings[] = {
 #endif
 
 void app_debug_print(const char* tag, debug_level_t level, const char* fmt, ...) {
-    #if (APP_DEBUG_ENABLED == 1)
+    #ifdef APP_DEBUG_ENABLED
     va_list args;
     
     // Print prefix: [TAG][LEVEL] 

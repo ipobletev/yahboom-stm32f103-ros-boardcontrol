@@ -11,35 +11,33 @@ void AppIMUTask(void *argument) {
     (void)argument;
     
     imu_data_t imu_raw;
+    static uint32_t last_publish = 0;
+    static uint32_t last_log = 0;
+    static uint32_t last_health = 0;
+    static bool imu_was_ok = false;
 
     // Initialize IMU
     if (!imu_init(IMU_INIT_RETRIES, IMU_USE_DEBUG)) {
         APP_DEBUG_ERROR("IMU", "IMU initialization failed!");
         global_system_error |= SYS_ERROR_IMU_INIT;
+        imu_was_ok = false;
     }
-
-    static uint32_t last_publish = 0;
-    static uint32_t last_log = 0;
-    static uint32_t last_health = 0;
-    static bool imu_was_ok = true;
 
     while (1) {
         uint32_t now = osKernelGetTickCount();
 
-        // Periodic Health Check (every 1s)
-        if (now - last_health >= 1000) {
+        // Periodic Reinitialization (every 1s) if IMU was not ok
+        if (now - last_health >= 1000 && imu_was_ok == false) {
             last_health = now;
-            bool imu_ok = imu_health_check();
-            
-            if (imu_ok && !imu_was_ok) {
-                APP_DEBUG_INFO("IMU", "IMU recovered!");
-                global_system_error &= ~SYS_ERROR_IMU_INIT;
-                imu_was_ok = true;
-            } else if (!imu_ok && imu_was_ok) {
-                APP_DEBUG_ERROR("IMU", "IMU health check failed!");
-                global_system_error |= SYS_ERROR_IMU_INIT;
+
+            if (!imu_init(IMU_INIT_RETRIES, IMU_USE_DEBUG)) {
+                APP_DEBUG_ERROR("IMU", "IMU Reinitialization failed!");
                 imu_was_ok = false;
+            }else{
+                APP_DEBUG_INFO("IMU", "IMU Reinitialization successful!");
+                imu_was_ok = true;
             }
+            global_system_error &= ~SYS_ERROR_IMU_INIT;
         }
 
         // Update IMU (always at loop rate)

@@ -35,7 +35,7 @@ void app_debug_print(const char* tag, debug_level_t level, const char* fmt, ...)
 /**
  * @brief Main debug macro.
  */
-#if (APP_DEBUG_ENABLED == 1)
+#ifdef APP_DEBUG_ENABLED
     #define APP_DEBUG(tag, level, fmt, ...) app_debug_print(tag, level, fmt, ##__VA_ARGS__)
 #else
     #define APP_DEBUG(tag, level, fmt, ...) ((void)0)

@@ -63,7 +63,20 @@ bool AK09916_init(uint8_t retries, bool debug) {
     AK09916_write_reg(MAG_CNTL3, 0x01);
     HAL_Delay(100);
     AK09916_write_reg(MAG_CNTL2, 0x08);
-    return true;
+
+    // Verify data is actually ready
+    uint8_t data_check_timeout = 10; // 10 * 10ms = 100ms
+    while(data_check_timeout > 0) {
+        if (AK09916_read_reg(MAG_ST1) & 0x01) {
+             if (g_debug) APP_DEBUG_INFO("AK09916", "Magnetometer data ready!\r\n");
+             return true; 
+        }
+        HAL_Delay(10);
+        data_check_timeout--;
+    }
+
+    if (g_debug) APP_DEBUG_ERROR("AK09916", "Magnetometer init failed: No data ready!\r\n");
+    return false;
 }
 
 bool AK09916_mag_read(raw_data_t* data) {
