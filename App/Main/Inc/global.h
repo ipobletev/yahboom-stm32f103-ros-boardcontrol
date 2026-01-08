@@ -46,12 +46,15 @@ typedef struct {
     bool is_moving_wheels;
     bool is_moving_spatial;
     uint32_t error_code;
-    //future implementation
-        //inclination
-        //velocity
-        //battery
-        //temperature
+    float roll;      // inclination roll (deg)
+    float pitch;     // inclination pitch (deg)
+    float velocity;  // linear velocity (m/s)
+    float battery;   // battery voltage (V)
+    float temperature; // internal temperature (degC)
 } machine_info_t;
+
+extern machine_info_t machine_info;
+extern int32_t g_encoder_counts[4]; 
 
 /* Shared global variables */
 extern osMessageQueueId_t system_msg_queue;

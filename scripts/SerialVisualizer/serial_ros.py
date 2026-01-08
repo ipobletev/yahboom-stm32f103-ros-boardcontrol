@@ -95,15 +95,20 @@ class SerialRosProtocol:
 # Data Structure Parsers
 def parse_machine_info(data):
     try:
-        # struct machine_info { uint8_t, uint8_t, uint8_t, uint8_t, uint32_t } -> 8 bytes
-        if len(data) >= 8:
-            state, mode, wheels, spatial, error = struct.unpack("<BBBB I", data[:8])
+        # struct machine_info { uint8_t, uint8_t, uint8_t, uint8_t, uint32_t, float, float, float, float, float } -> 28 bytes
+        if len(data) >= 28:
+            state, mode, wheels, spatial, error, roll, pitch, velocity, battery, temperature = struct.unpack("<BBBB I fffff", data[:28])
             return {
                 "state": state, 
                 "mode": mode, 
                 "moving_wheels": bool(wheels),
                 "moving_spatial": bool(spatial),
-                "error_code": error
+                "error_code": error,
+                "roll": roll,
+                "pitch": pitch,
+                "velocity": velocity,
+                "battery": battery,
+                "temperature": temperature
             }
     except:
         pass

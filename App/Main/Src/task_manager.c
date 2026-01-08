@@ -1,8 +1,12 @@
 #include "app_debug.h"
 #include "task_manager.h"
 #include "global.h"
+#include "imu_app.h"
+#include "bsp_adc.h"
+#include "config.h"
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "io_buzzer.h"
 #include "motor.h"
 #include "io_led.h"
@@ -20,19 +24,52 @@ void state_emergency_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_b
 
 void StatePubTimerCallback(void *argument)
 {
-  (void)argument;
+  imu_data_t imu_raw;
+  imu_get_data(&imu_raw);
+
+  // Calculate Inclination
+  float roll = atan2f(imu_raw.acc[1], imu_raw.acc[2]) * 57.29578f;
+  float pitch = atan2f(-imu_raw.acc[0], sqrtf(imu_raw.acc[1] * imu_raw.acc[1] + imu_raw.acc[2] * imu_raw.acc[2])) * 57.29578f;
+
+  // Calculate Velocity from Encoders
+  static int32_t last_encs[4] = {0};
+  static uint32_t last_time = 0;
+  uint32_t now = osKernelGetTickCount();
+  float dt = (now - last_time) / 1000.0f;
   
+  float velocity = 0.0f;
+  
+  if (dt > 0.0f && last_time > 0) {
+      int32_t delta_sum = 0;
+      for(int i=0; i<4; i++) {
+        delta_sum += (g_encoder_counts[i] - last_encs[i]);
+      }
+      float avg_delta = (float)delta_sum / 4.0f;
+      // v = (delta / dt) * (PI * D / PPR)
+      velocity = (avg_delta / dt) * (3.14159f * WHEEL_DIAMETER / ENCODER_PPR);
+  }
+  
+  // Update history
+  for(int i=0; i<4; i++) last_encs[i] = g_encoder_counts[i];
+  last_time = now;
+
   machine_info_t payload = {
     .state = current_state,
     .mode = current_mode,
     .is_moving_wheels = is_moving_wheels,
     .is_moving_spatial = is_moving_spatial,
-    .error_code = global_system_error
+    .error_code = global_system_error,
+    .roll = roll,
+    .pitch = pitch,
+    .velocity = velocity,
+    .battery = bsp_adc_battery_read(),
+    .temperature = bsp_adc_temperature_read()
   };
   serial_ros_publish(TOPIC_PUB_MACHINE_INFO, (uint8_t*)&payload, sizeof(payload));
   
-  APP_DEBUG_INFO("MANAGER", "State: %d, Mode: %d, Moving (W:%d, S:%d)\r\n", 
-          payload.state, payload.mode, payload.is_moving_wheels, payload.is_moving_spatial);
+  APP_DEBUG_INFO("MANAGER", "State: %d, Mode: %d, Moving (W:%d, S:%d), Roll: %.1f, Pitch: %.1f, Vel: %.2f, Bat: %.1fV, Temp: %.1fC\r\n", 
+          payload.state, payload.mode, payload.is_moving_wheels, payload.is_moving_spatial,
+          payload.roll, payload.pitch, payload.velocity, payload.battery, payload.temperature);
 
 }
 

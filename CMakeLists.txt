@@ -62,6 +62,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/SerialROS/Inc
     Drivers/BSP/serial_ros/Inc
     App/Debug/Inc
+    Drivers/BSP/adc/Inc
 )
 
 # Add source files
@@ -89,6 +90,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/SerialROS/Src/serial_ros.c
     Drivers/BSP/serial_ros/Src/bsp_serial_ros.c
     App/Debug/Src/app_debug.c
+    Drivers/BSP/adc/Src/bsp_adc.c
 )
 
 # Add linked libraries

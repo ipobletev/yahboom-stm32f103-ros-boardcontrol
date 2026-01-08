@@ -171,6 +171,11 @@ class SerialVisualizer(QMainWindow):
         self.lbl_mode = QLabel("-")
         self.lbl_moving_wheels = QLabel("-")
         self.lbl_moving_spatial = QLabel("-")
+        self.lbl_roll = QLabel("-")
+        self.lbl_pitch = QLabel("-")
+        self.lbl_velocity = QLabel("-")
+        self.lbl_battery = QLabel("-")
+        self.lbl_temperature = QLabel("-")
         self.lbl_error_code = QLabel("-")
         info_grid.addWidget(QLabel("State:"), 0, 0)
         info_grid.addWidget(self.lbl_state, 0, 1)
@@ -180,12 +185,22 @@ class SerialVisualizer(QMainWindow):
         info_grid.addWidget(self.lbl_moving_wheels, 2, 1)
         info_grid.addWidget(QLabel("Moving (Spatial):"), 3, 0)
         info_grid.addWidget(self.lbl_moving_spatial, 3, 1)
-        info_grid.addWidget(QLabel("<b>Error Code:</b>"), 4, 0)
-        info_grid.addWidget(self.lbl_error_code, 4, 1)
+        info_grid.addWidget(QLabel("Roll:"), 4, 0)
+        info_grid.addWidget(self.lbl_roll, 4, 1)
+        info_grid.addWidget(QLabel("Pitch:"), 5, 0)
+        info_grid.addWidget(self.lbl_pitch, 5, 1)
+        info_grid.addWidget(QLabel("Velocity:"), 6, 0)
+        info_grid.addWidget(self.lbl_velocity, 6, 1)
+        info_grid.addWidget(QLabel("Battery:"), 7, 0)
+        info_grid.addWidget(self.lbl_battery, 7, 1)
+        info_grid.addWidget(QLabel("Temp:"), 8, 0)
+        info_grid.addWidget(self.lbl_temperature, 8, 1)
+        info_grid.addWidget(QLabel("<b>Error Code:</b>"), 9, 0)
+        info_grid.addWidget(self.lbl_error_code, 9, 1)
         
         self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO] = QLabel("0.0 Hz")
-        info_grid.addWidget(QLabel("Freq:"), 5, 0)
-        info_grid.addWidget(self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO], 5, 1)
+        info_grid.addWidget(QLabel("Freq:"), 10, 0)
+        info_grid.addWidget(self.lbl_topic_freqs[self.protocol.TOPIC_PUB_MACHINE_INFO], 10, 1)
         
         dash_layout.addWidget(info_group)
 
@@ -375,6 +390,7 @@ class SerialVisualizer(QMainWindow):
         if not hasattr(self, 'current_data_cache'):
             self.current_data_cache = {
                 "state": 0, "mode": 0, "wheels": 0, "spatial": 0, "error": 0,
+                "roll": 0, "pitch": 0, "velocity": 0, "battery": 0, "temperature": 0,
                 "acc_x": 0, "acc_y": 0, "acc_z": 0,
                 "gyro_x": 0, "gyro_y": 0, "gyro_z": 0,
                 "mag_x": 0, "mag_y": 0, "mag_z": 0,
@@ -394,7 +410,10 @@ class SerialVisualizer(QMainWindow):
                     "state": info["state"], "mode": info["mode"], 
                     "wheels": int(info["moving_wheels"]), 
                     "spatial": int(info["moving_spatial"]),
-                    "error": info["error_code"]
+                    "error": info["error_code"],
+                    "roll": info["roll"],
+                    "pitch": info["pitch"],
+                    "velocity": info["velocity"]
                 })
                 states = ["IDLE", "MOVING", "TEMP_STOP", "E_STOP"]
                 modes = ["MANUAL", "AUTONOMOUS"]
@@ -402,6 +421,11 @@ class SerialVisualizer(QMainWindow):
                 self.lbl_mode.setText(modes[info["mode"]] if info["mode"] < len(modes) else str(info["mode"]))
                 self.lbl_moving_wheels.setText("YES" if info["moving_wheels"] else "NO")
                 self.lbl_moving_spatial.setText("YES" if info["moving_spatial"] else "NO")
+                self.lbl_roll.setText(f"{info['roll']:.1f}°")
+                self.lbl_pitch.setText(f"{info['pitch']:.1f}°")
+                self.lbl_velocity.setText(f"{info['velocity']:.2f} m/s")
+                self.lbl_battery.setText(f"{info['battery']:.2f} V")
+                self.lbl_temperature.setText(f"{info['temperature']:.1f} °C")
                 self.lbl_error_code.setText(f"0x{info['error_code']:08X}")
                 
                 # Style colors for easier visualization
@@ -587,6 +611,11 @@ class SerialVisualizer(QMainWindow):
         self.lbl_mode.setText("-")
         self.lbl_moving_wheels.setText("-")
         self.lbl_moving_spatial.setText("-")
+        self.lbl_roll.setText("-")
+        self.lbl_pitch.setText("-")
+        self.lbl_velocity.setText("-")
+        self.lbl_battery.setText("-")
+        self.lbl_temperature.setText("-")
         self.lbl_error_code.setText("-")
         self.lbl_state.setStyleSheet("")
         self.lbl_error_code.setStyleSheet("")

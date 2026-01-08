@@ -80,3 +80,7 @@
 #define ENCODER_THRESHOLD 1
 #define GYRO_THRESHOLD 0.05f
 #define ACCEL_THRESHOLD 0.1f
+
+// ROBOT PHYSICAL PARAMS
+#define WHEEL_DIAMETER 0.080f   // 80mm
+#define ENCODER_PPR 1320.0f      // 11 ticks * 30 gear ratio * 4 quadrature ?? TODO: Verify
