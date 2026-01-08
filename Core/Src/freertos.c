@@ -22,6 +22,7 @@
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
+#include "global.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -72,7 +73,7 @@ const osThreadAttr_t AppIMU_attributes = {
 osThreadId_t AppManagerHandle;
 const osThreadAttr_t AppManager_attributes = {
   .name = "AppManager",
-  .stack_size = 128 * 4,
+  .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for AppHearthbeat */
@@ -120,11 +121,12 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+  system_msg_queue = osMessageQueueNew(10, sizeof(system_msg_t), NULL);
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* creation of AppController */
-  // AppControllerHandle = osThreadNew(AppControllerTask, NULL, &AppController_attributes);
+  AppControllerHandle = osThreadNew(AppControllerTask, NULL, &AppController_attributes);
 
   /* creation of AppEncoder */
   AppEncoderHandle = osThreadNew(AppEncoderTask, NULL, &AppEncoder_attributes);
@@ -133,7 +135,7 @@ void MX_FREERTOS_Init(void) {
   AppIMUHandle = osThreadNew(AppIMUTask, NULL, &AppIMU_attributes);
 
   /* creation of AppManager */
-  // AppManagerHandle = osThreadNew(AppManagerTask, NULL, &AppManager_attributes);
+  AppManagerHandle = osThreadNew(AppManagerTask, NULL, &AppManager_attributes);
 
   /* creation of AppHearthbeat */
   AppHearthbeatHandle = osThreadNew(AppHearthbeatTask, NULL, &AppHearthbeat_attributes);
