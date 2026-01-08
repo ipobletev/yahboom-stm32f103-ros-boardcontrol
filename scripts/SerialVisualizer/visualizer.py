@@ -45,6 +45,8 @@ class SerialVisualizer(QMainWindow):
             self.protocol.TOPIC_PUB_ENCODER: {"name": "ENCODER", "count": 0, "freq": 0.0}
         }
         self.last_stats_time = time.time()
+        self.last_machine_info_time = 0
+        self.board_connected = False
         self.lbl_topic_freqs = {}
 
         # Error mapping (matching app_errors.h)
@@ -104,6 +106,12 @@ class SerialVisualizer(QMainWindow):
         conn_layout.addWidget(QLabel("Baud:"))
         conn_layout.addWidget(self.baud_combo)
         conn_layout.addWidget(self.connect_btn)
+        
+        self.lbl_conn_status = QLabel("○ Disconnected")
+        self.lbl_conn_status.setStyleSheet("color: gray; font-weight: bold; margin-left: 20px;")
+        conn_layout.addWidget(self.lbl_conn_status)
+        conn_layout.addStretch()
+        
         main_layout.addWidget(conn_group)
 
         # --- Tab Widget ---
@@ -374,6 +382,12 @@ class SerialVisualizer(QMainWindow):
             }
 
         if topic_id == self.protocol.TOPIC_PUB_MACHINE_INFO:
+            self.last_machine_info_time = time.time()
+            if not self.board_connected:
+                self.board_connected = True
+                self.lbl_conn_status.setText("● Connected")
+                self.lbl_conn_status.setStyleSheet("color: #2ecc71; font-weight: bold; margin-left: 20px;")
+
             info = parse_machine_info(payload)
             if info:
                 self.current_data_cache.update({
@@ -558,7 +572,44 @@ class SerialVisualizer(QMainWindow):
             if tid in self.lbl_topic_freqs:
                 self.lbl_topic_freqs[tid].setText(f"{freq:.2f} Hz")
         
+        # Connection Watchdog
+        if self.board_connected and (now - self.last_machine_info_time > 2.5):
+            self.board_connected = False
+            self.lbl_conn_status.setText("○ Disconnected")
+            self.lbl_conn_status.setStyleSheet("color: #e74c3c; font-weight: bold; margin-left: 20px;")
+            self.reset_ui_placeholders()
+
         self.last_stats_time = now
+
+    def reset_ui_placeholders(self):
+        """Reset all data labels to '-' when board is disconnected"""
+        self.lbl_state.setText("-")
+        self.lbl_mode.setText("-")
+        self.lbl_moving_wheels.setText("-")
+        self.lbl_moving_spatial.setText("-")
+        self.lbl_error_code.setText("-")
+        self.lbl_state.setStyleSheet("")
+        self.lbl_error_code.setStyleSheet("")
+        self.lbl_moving_wheels.setStyleSheet("")
+        self.lbl_moving_spatial.setStyleSheet("")
+        
+        for lbl in self.lbl_encs: lbl.setText("-")
+        for lbl in self.lbl_acc: lbl.setText("-")
+        for lbl in self.lbl_gyro: lbl.setText("-")
+        for lbl in self.lbl_mag: lbl.setText("-")
+        
+        for tid in self.lbl_topic_freqs:
+            self.lbl_topic_freqs[tid].setText("0.0 Hz")
+        
+        # Reset error table
+        for row in range(self.error_table.rowCount()):
+            status_item = self.error_table.item(row, 2)
+            code_item = self.error_table.item(row, 1)
+            status_item.setText("-")
+            status_item.setBackground(Qt.transparent)
+            status_item.setForeground(Qt.gray)
+            code_item.setBackground(Qt.transparent)
+            code_item.setForeground(Qt.gray)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
