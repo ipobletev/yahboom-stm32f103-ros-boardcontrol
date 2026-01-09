@@ -3,12 +3,14 @@
 #include <string.h>
 #include "stm32f1xx_hal.h"
 #include "app_debug.h"
+#include "config.h"
 
-// STM32F103RCTx has 256KB Flash. Page size is 2KB.
-// Last page starts at 0x0803F800
-#define FLASH_STORAGE_ADDR 0x0803F800
-#ifndef FLASH_PAGE_SIZE
-#define FLASH_PAGE_SIZE    2048
+#ifndef FLASH_STORAGE_ADDR
+#define FLASH_STORAGE_ADDR    0x0803F800
+#endif
+
+#ifndef VIRTUAL_FLASH_PAGE_SIZE
+#define VIRTUAL_FLASH_PAGE_SIZE    2048
 #endif
 
 static uint32_t calculate_checksum(const app_config_t *config) {

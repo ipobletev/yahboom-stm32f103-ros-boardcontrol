@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "config.h"
 
 #ifndef SERIAL_ROS_HEADER_1
 #define SERIAL_ROS_HEADER_1 0xAA

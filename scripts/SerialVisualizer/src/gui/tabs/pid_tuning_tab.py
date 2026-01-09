@@ -27,8 +27,9 @@ class PIDTuningTab(QWidget):
         
         # PID Controls for each motor
         self.pid_controls = []
+        labels = ["Motor 1 (FL)", "Motor 2 (FR)", "Motor 3 (BL)", "Motor 4 (BR)"]
         for i in range(4):
-            group = QGroupBox(f"Motor {i+1} PID")
+            group = QGroupBox(f"{labels[i]} PID")
             grid = QGridLayout(group)
             
             kp_spin = QDoubleSpinBox(); kp_spin.setRange(0, 100); kp_spin.setSingleStep(0.1); kp_spin.setValue(1.5)

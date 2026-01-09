@@ -51,7 +51,7 @@
 osThreadId_t AppControllerHandle;
 const osThreadAttr_t AppController_attributes = {
   .name = "AppController",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for AppEncoder */
@@ -79,7 +79,7 @@ const osThreadAttr_t AppManager_attributes = {
 osThreadId_t AppHearthbeatHandle;
 const osThreadAttr_t AppHearthbeat_attributes = {
   .name = "AppHearthbeat",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for AppMotion */

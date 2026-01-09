@@ -74,7 +74,7 @@ class RawDataTab(QWidget):
         enc_group = QGroupBox("Encoders")
         enc_grid = QGridLayout(enc_group)
         self.lbl_encs = [QLabel("-") for _ in range(4)]
-        labels = ["FL:", "FR:", "BL:", "BR:"]
+        labels = ["Motor 1 (FL):", "Motor 2 (FR):", "Motor 3 (BL):", "Motor 4 (BR):"]
         for i in range(4):
             enc_grid.addWidget(QLabel(labels[i]), i // 2, (i % 2) * 2)
             enc_grid.addWidget(self.lbl_encs[i], i // 2, (i % 2) * 2 + 1)
@@ -122,7 +122,7 @@ class RawDataTab(QWidget):
         self.lbl_pid_ki = [QLabel("-") for _ in range(4)]
         self.lbl_pid_kd = [QLabel("-") for _ in range(4)]
         
-        wheels = ["FL", "FR", "BL", "BR"]
+        wheels = ["Motor 1 (FL)", "Motor 2 (FR)", "Motor 3 (BL)", "Motor 4 (BR)"]
         pid_grid.addWidget(QLabel("<b>Wheel</b>"), 0, 0)
         pid_grid.addWidget(QLabel("<b>Target</b>"), 0, 1)
         pid_grid.addWidget(QLabel("<b>Cur</b>"), 0, 2)

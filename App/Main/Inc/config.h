@@ -1,5 +1,6 @@
-// TIMEOUT CONFIG FOR CMD VEL. If no new command is received for this time, the motors will stop
-#define TIMEOUT_LAST_CMD_MS 250
+// DEVICE CONFIG
+#define TIMEOUT_LAST_CMD_MS 250     // TIMEOUT CONFIG FOR CMD VEL. If no new command is received for this time, the motors will stop
+#define TIME_WATCHDOG_MS 1000       // 1s refresh rate
 
 // ROS PUBLISH TIME CONFIG
 #define TIME_ENCODER_PUBLISH_MS         100              //10Hz    
@@ -7,10 +8,9 @@
 #define TIME_MACHINE_INFO_PUBLISH_MS    250              //4Hz
 #define TIME_PID_DEBUG_PUBLISH_MS       50               //20Hz
 // STORAGE CONFIG
-#define STORAGE_ENABLED                 0                // Set to 1 to enable persistent storage
-#define FLASH_STORAGE_ADDR              0x0803F800
-#define FLASH_PAGE_SIZE                 2048
-#define TIME_WATCHDOG_MS 1000   //1s
+#define STORAGE_ENABLED                 1                // Set to 1 to enable persistent storage
+#define FLASH_STORAGE_ADDR              0x0803F000       // STM32F103RCTx has 256KB Flash. Page size is 2KB. Last page starts at 0x0803F800. Reserved 2 pages from 0x0803F000
+#define VIRTUAL_FLASH_PAGE_SIZE         2048
 
 //IMU CONFIG
 #define IMU_USE_DEBUG true
