@@ -26,6 +26,19 @@ jobs:
     - name: Build
       run: cmake --build --preset Release
 
+    - name: Size Analysis
+      run: |
+        arm-none-eabi-size build/Release/*.elf
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: stm32-binaries-${{ github.sha }}
+        path: |
+          build/Release/*.elf
+          build/Release/*.bin
+          build/Release/*.hex
+          
     - name: Create Release
       uses: softprops/action-gh-release@v2
       env:
