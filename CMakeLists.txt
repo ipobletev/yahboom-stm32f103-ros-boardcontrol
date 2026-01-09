@@ -63,6 +63,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/Debug/Inc
     Drivers/BSP/adc/Inc
     App/Storage/Inc
+    Drivers/BSP/storage/Inc
 )
 
 # Add source files
@@ -91,6 +92,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Debug/Src/app_debug.c
     Drivers/BSP/adc/Src/bsp_adc.c
     App/Storage/Src/storage.c
+    Drivers/BSP/storage/Src/bsp_storage.c
 )
 
 # Add linked libraries

@@ -8,7 +8,6 @@
 #define TIME_MACHINE_INFO_PUBLISH_MS    250              //4Hz
 #define TIME_PID_DEBUG_PUBLISH_MS       50               //20Hz
 // STORAGE CONFIG
-#define STORAGE_ENABLED                 1                // Set to 1 to enable persistent storage
 #define FLASH_STORAGE_ADDR              0x0803F000       // STM32F103RCTx has 256KB Flash. Page size is 2KB. Last page starts at 0x0803F800. Reserved 2 pages from 0x0803F000
 #define VIRTUAL_FLASH_PAGE_SIZE         2048
 

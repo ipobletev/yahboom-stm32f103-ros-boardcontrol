@@ -1,16 +1,12 @@
 #include "../Inc/storage.h"
 #include <stdbool.h>
 #include <string.h>
-#include "stm32f1xx_hal.h"
+#include "bsp_storage.h"
 #include "app_debug.h"
 #include "config.h"
 
 #ifndef FLASH_STORAGE_ADDR
 #define FLASH_STORAGE_ADDR    0x0803F800
-#endif
-
-#ifndef VIRTUAL_FLASH_PAGE_SIZE
-#define VIRTUAL_FLASH_PAGE_SIZE    2048
 #endif
 
 static uint32_t calculate_checksum(const app_config_t *config) {
@@ -24,7 +20,9 @@ static uint32_t calculate_checksum(const app_config_t *config) {
 }
 
 bool storage_load(app_config_t *config) {
-    memcpy(config, (void*)FLASH_STORAGE_ADDR, sizeof(app_config_t));
+    if (!BSP_Storage_Read(FLASH_STORAGE_ADDR, config, sizeof(app_config_t))) {
+        return false;
+    }
     
     if (config->magic != STORAGE_MAGIC) {
         APP_DEBUG_INFO("STORAGE", "Invalid magic number in storage (0x%08lX)", config->magic);
@@ -45,30 +43,16 @@ bool storage_save(const app_config_t *config) {
     copy.magic = STORAGE_MAGIC;
     copy.checksum = calculate_checksum(&copy);
 
-    HAL_FLASH_Unlock();
-
-    FLASH_EraseInitTypeDef erase;
-    erase.TypeErase = FLASH_TYPEERASE_PAGES;
-    erase.PageAddress = FLASH_STORAGE_ADDR;
-    erase.NbPages = 1;
-
-    uint32_t pageError = 0;
-    if (HAL_FLASHEx_Erase(&erase, &pageError) != HAL_OK) {
-        HAL_FLASH_Lock();
-        APP_DEBUG_ERROR("STORAGE", "Flash erase failed!");
+    if (!BSP_Storage_Erase(FLASH_STORAGE_ADDR)) {
+        APP_DEBUG_ERROR("STORAGE", "Flash erase failed via BSP!");
         return false;
     }
 
-    uint32_t *pData = (uint32_t*)&copy;
-    for (size_t i = 0; i < sizeof(app_config_t); i += 4) {
-        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_STORAGE_ADDR + i, *pData++) != HAL_OK) {
-            HAL_FLASH_Lock();
-            APP_DEBUG_ERROR("STORAGE", "Flash program failed at offset %d", i);
-            return false;
-        }
+    if (!BSP_Storage_Write(FLASH_STORAGE_ADDR, &copy, sizeof(app_config_t))) {
+        APP_DEBUG_ERROR("STORAGE", "Flash program failed via BSP!");
+        return false;
     }
 
-    HAL_FLASH_Lock();
     APP_DEBUG_INFO("STORAGE", "Configuration saved to flash.");
     return true;
 }

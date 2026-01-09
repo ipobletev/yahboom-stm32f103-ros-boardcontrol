@@ -25,7 +25,6 @@ extern cmd_vel_t last_cmd;
     }
 
 // Seriel Reception for ROS commands
-#if STORAGE_ENABLED
 static void save_current_config(void) {
     app_config_t cfg;
     cfg.wheel_diameter = g_wheel_diameter;
@@ -48,7 +47,6 @@ static void save_current_config(void) {
 
     storage_save(&cfg);
 }
-#endif
 
 static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint8_t length) {
 
@@ -129,7 +127,6 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
 
         case TOPIC_ESTOP_CMD:
             end_by_emergency_stop();
-            end_by_manual_mode();
             if (length == 1) {
                 system_msg_t msg = { 
                     .requested_state = STATE_STOP_EMERGENCY, 
@@ -157,9 +154,7 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
                         if (m != NULL) {
                             motor_set_pid_gains(m, kp, ki, kd);
                             APP_DEBUG_INFO("RECEIVER", "Updated PID for Motor %d: %.2f, %.2f, %.2f", item_id + 1, kp, ki, kd);
-#if STORAGE_ENABLED
                             save_current_config();
-#endif
                         }
                     }
                 } else if (item_id == CONFIG_ITEM_WHEEL_DIAM) {
@@ -168,9 +163,7 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
                         memcpy(&diam, &payload[1], 4);
                         g_wheel_diameter = diam;
                         APP_DEBUG_INFO("RECEIVER", "Updated Wheel Diameter: %.4f", g_wheel_diameter);
-#if STORAGE_ENABLED
                         save_current_config();
-#endif
                     }
                 }
             }

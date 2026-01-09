@@ -145,7 +145,6 @@ void AppManagerTask(void *argument) {
     m_ok &= motor_init(&motor_br, &motor_br_cfg, MOTOR_ID_4);
 
     // Load persistent config if available
-#if STORAGE_ENABLED
     app_config_t storage_cfg;
     if (storage_load(&storage_cfg)) {
         APP_DEBUG_INFO("MANAGER", "Applying persistent configuration from Flash");
@@ -155,7 +154,6 @@ void AppManagerTask(void *argument) {
         motor_set_pid_gains(&motor_bl, storage_cfg.pid[2].kp, storage_cfg.pid[2].ki, storage_cfg.pid[2].kd);
         motor_set_pid_gains(&motor_br, storage_cfg.pid[3].kp, storage_cfg.pid[3].ki, storage_cfg.pid[3].kd);
     }
-#endif
 
     if (!m_ok) {
         APP_DEBUG_ERROR("MANAGER", "Motor initialization failed!");
