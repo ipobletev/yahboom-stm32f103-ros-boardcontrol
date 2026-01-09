@@ -118,18 +118,27 @@ class RawDataTab(QWidget):
         self.lbl_pid_target = [QLabel("-") for _ in range(4)]
         self.lbl_pid_current = [QLabel("-") for _ in range(4)]
         self.lbl_pid_error = [QLabel("-") for _ in range(4)]
+        self.lbl_pid_kp = [QLabel("-") for _ in range(4)]
+        self.lbl_pid_ki = [QLabel("-") for _ in range(4)]
+        self.lbl_pid_kd = [QLabel("-") for _ in range(4)]
         
         wheels = ["FL", "FR", "BL", "BR"]
         pid_grid.addWidget(QLabel("<b>Wheel</b>"), 0, 0)
         pid_grid.addWidget(QLabel("<b>Target</b>"), 0, 1)
-        pid_grid.addWidget(QLabel("<b>Current</b>"), 0, 2)
-        pid_grid.addWidget(QLabel("<b>Error</b>"), 0, 3)
+        pid_grid.addWidget(QLabel("<b>Cur</b>"), 0, 2)
+        pid_grid.addWidget(QLabel("<b>Err</b>"), 0, 3)
+        pid_grid.addWidget(QLabel("<b>Kp</b>"), 0, 4)
+        pid_grid.addWidget(QLabel("<b>Ki</b>"), 0, 5)
+        pid_grid.addWidget(QLabel("<b>Kd</b>"), 0, 6)
         
         for i in range(4):
             pid_grid.addWidget(QLabel(wheels[i]), i+1, 0)
             pid_grid.addWidget(self.lbl_pid_target[i], i+1, 1)
             pid_grid.addWidget(self.lbl_pid_current[i], i+1, 2)
             pid_grid.addWidget(self.lbl_pid_error[i], i+1, 3)
+            pid_grid.addWidget(self.lbl_pid_kp[i], i+1, 4)
+            pid_grid.addWidget(self.lbl_pid_ki[i], i+1, 5)
+            pid_grid.addWidget(self.lbl_pid_kd[i], i+1, 6)
             
         data_layout.addWidget(pid_group)
         layout.addLayout(data_layout)
@@ -258,6 +267,10 @@ class RawDataTab(QWidget):
             self.lbl_pid_target[i].setText(f"{pid_debug['target'][i]:.2f}")
             self.lbl_pid_current[i].setText(f"{pid_debug['current'][i]:.2f}")
             self.lbl_pid_error[i].setText(f"{pid_debug['error'][i]:.2f}")
+            if "kp" in pid_debug:
+                self.lbl_pid_kp[i].setText(f"{pid_debug['kp'][i]:.2f}")
+                self.lbl_pid_ki[i].setText(f"{pid_debug['ki'][i]:.2f}")
+                self.lbl_pid_kd[i].setText(f"{pid_debug['kd'][i]:.2f}")
 
     def set_freqs(self, freqs):
         # freqs is a dict {topic_id: freq}
@@ -273,7 +286,8 @@ class RawDataTab(QWidget):
             lbl.setText("-")
             lbl.setStyleSheet("")
         for lbl in self.lbl_encs + self.lbl_acc + self.lbl_gyro + self.lbl_mag + \
-                   self.lbl_pid_target + self.lbl_pid_current + self.lbl_pid_error:
+                   self.lbl_pid_target + self.lbl_pid_current + self.lbl_pid_error + \
+                   self.lbl_pid_kp + self.lbl_pid_ki + self.lbl_pid_kd:
             lbl.setText("-")
         self.lbl_freq_machine.setText("0.0 Hz")
         self.lbl_freq_imu.setText("0.0 Hz")

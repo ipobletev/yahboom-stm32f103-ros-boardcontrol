@@ -39,11 +39,18 @@ class PIDTuningTab(QWidget):
             grid.addWidget(QLabel("Ki:"), 1, 0); grid.addWidget(ki_spin, 1, 1)
             grid.addWidget(QLabel("Kd:"), 2, 0); grid.addWidget(kd_spin, 2, 1)
             
+            self.lbl_kp_actual = QLabel("Actual: -"); grid.addWidget(self.lbl_kp_actual, 0, 2)
+            self.lbl_ki_actual = QLabel("Actual: -"); grid.addWidget(self.lbl_ki_actual, 1, 2)
+            self.lbl_kd_actual = QLabel("Actual: -"); grid.addWidget(self.lbl_kd_actual, 2, 2)
+
             btn = QPushButton("Update PID")
             btn.clicked.connect(lambda checked=False, idx=i: self.emit_pid_update(idx))
-            grid.addWidget(btn, 3, 0, 1, 2)
+            grid.addWidget(btn, 3, 0, 1, 3)
             
-            self.pid_controls.append({"kp": kp_spin, "ki": ki_spin, "kd": kd_spin})
+            self.pid_controls.append({
+                "kp": kp_spin, "ki": ki_spin, "kd": kd_spin,
+                "kp_act": self.lbl_kp_actual, "ki_act": self.lbl_ki_actual, "kd_act": self.lbl_kd_actual
+            })
             ctrl_layout.addWidget(group)
             
         main_layout.addLayout(ctrl_layout)
@@ -114,6 +121,12 @@ class PIDTuningTab(QWidget):
             self.speed_curves[i][0].setData(self.pid_data["target"][i])
             self.speed_curves[i][1].setData(self.pid_data["current"][i])
             self.error_curves[i].setData(self.pid_data["error"][i])
+
+            # Update actual gain labels
+            if "kp" in data:
+                self.pid_controls[i]["kp_act"].setText(f"Actual: {data['kp'][i]:.2f}")
+                self.pid_controls[i]["ki_act"].setText(f"Actual: {data['ki'][i]:.2f}")
+                self.pid_controls[i]["kd_act"].setText(f"Actual: {data['kd'][i]:.2f}")
 
     def reset_placeholders(self):
         for i in range(4):

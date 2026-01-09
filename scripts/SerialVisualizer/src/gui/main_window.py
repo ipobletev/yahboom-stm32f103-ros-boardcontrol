@@ -52,10 +52,10 @@ class SerialVisualizerWindow(QMainWindow):
             "roll", "pitch", "velocity", "battery", "temperature", "angular_velocity",
             "acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z", "mag_x", "mag_y", "mag_z",
             "enc_fl", "enc_fr", "enc_bl", "enc_br",
-            "pid_fl_target", "pid_fl_current", "pid_fl_error",
-            "pid_fr_target", "pid_fr_current", "pid_fr_error",
-            "pid_bl_target", "pid_bl_current", "pid_bl_error",
-            "pid_br_target", "pid_br_current", "pid_br_error"
+            "pid_fl_target", "pid_fl_current", "pid_fl_error", "pid_fl_kp", "pid_fl_ki", "pid_fl_kd",
+            "pid_fr_target", "pid_fr_current", "pid_fr_error", "pid_fr_kp", "pid_fr_ki", "pid_fr_kd",
+            "pid_bl_target", "pid_bl_current", "pid_bl_error", "pid_bl_kp", "pid_bl_ki", "pid_bl_kd",
+            "pid_br_target", "pid_br_current", "pid_br_error", "pid_br_kp", "pid_br_ki", "pid_br_kd"
         ]
         self.current_data_cache = {k: 0.0 for k in self.csv_fieldnames if k != "timestamp"}
         self.heartbeat_timer = QTimer()
@@ -207,6 +207,9 @@ class SerialVisualizerWindow(QMainWindow):
                     self.current_data_cache[f"pid_{wheel}_target"] = pid_debug["target"][i]
                     self.current_data_cache[f"pid_{wheel}_current"] = pid_debug["current"][i]
                     self.current_data_cache[f"pid_{wheel}_error"] = pid_debug["error"][i]
+                    self.current_data_cache[f"pid_{wheel}_kp"] = pid_debug["kp"][i]
+                    self.current_data_cache[f"pid_{wheel}_ki"] = pid_debug["ki"][i]
+                    self.current_data_cache[f"pid_{wheel}_kd"] = pid_debug["kd"][i]
 
         if self.is_recording:
             row = {"timestamp": time.time() - self.recording_start_time}
@@ -381,7 +384,10 @@ class SerialVisualizerWindow(QMainWindow):
             pid_data = {
                 "target": [row["pid_fl_target"], row["pid_fr_target"], row["pid_bl_target"], row["pid_br_target"]],
                 "current": [row["pid_fl_current"], row["pid_fr_current"], row["pid_bl_current"], row["pid_br_current"]],
-                "error": [row["pid_fl_error"], row["pid_fr_error"], row["pid_bl_error"], row["pid_br_error"]]
+                "error": [row["pid_fl_error"], row["pid_fr_error"], row["pid_bl_error"], row["pid_br_error"]],
+                "kp": [row.get("pid_fl_kp", 0), row.get("pid_fr_kp", 0), row.get("pid_bl_kp", 0), row.get("pid_br_kp", 0)],
+                "ki": [row.get("pid_fl_ki", 0), row.get("pid_fr_ki", 0), row.get("pid_bl_ki", 0), row.get("pid_br_ki", 0)],
+                "kd": [row.get("pid_fl_kd", 0), row.get("pid_fr_kd", 0), row.get("pid_bl_kd", 0), row.get("pid_br_kd", 0)]
             }
             self.raw_tab.update_pid_labels(pid_data)
             

@@ -28,7 +28,10 @@ void PidDebugTimerCallback(void *argument)
     pid_debug_msg_t msg = {
         .target = {motor_fl.pid.target, motor_fr.pid.target, motor_bl.pid.target, motor_br.pid.target},
         .current = {motor_fl.pid.current, motor_fr.pid.current, motor_bl.pid.current, motor_br.pid.current},
-        .error = {motor_fl.pid.error[0], motor_fr.pid.error[0], motor_bl.pid.error[0], motor_br.pid.error[0]}
+        .error = {motor_fl.pid.error[0], motor_fr.pid.error[0], motor_bl.pid.error[0], motor_br.pid.error[0]},
+        .kp = {motor_fl.pid.Kp, motor_fr.pid.Kp, motor_bl.pid.Kp, motor_br.pid.Kp},
+        .ki = {motor_fl.pid.Ki, motor_fr.pid.Ki, motor_bl.pid.Ki, motor_br.pid.Ki},
+        .kd = {motor_fl.pid.Kd, motor_fr.pid.Kd, motor_bl.pid.Kd, motor_br.pid.Kd}
     };
     serial_ros_publish(TOPIC_PID_DEBUG, (uint8_t*)&msg, sizeof(msg));
 }

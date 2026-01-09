@@ -3,7 +3,7 @@ import struct
 class SerialProtocol:
     HEADER1 = 0xAA
     HEADER2 = 0x55
-    MAX_PAYLOAD = 64
+    MAX_PAYLOAD = 128
 
     # Topic IDs
     TOPIC_PUB_MACHINE_INFO = 0x01
@@ -159,14 +159,26 @@ def parse_encoder(data):
     return None
 
 def parse_pid_debug(data):
-    # struct { float target[4], current[4], error[4] } -> 12 floats = 48 bytes
+    # struct { float target[4], current[4], error[4], kp[4], ki[4], kd[4] } -> 24 floats = 96 bytes
     try:
-        if len(data) == 48:
+        if len(data) == 96:
+            vals = struct.unpack("<24f", data)
+            return {
+                "target": vals[0:4],
+                "current": vals[4:8],
+                "error": vals[8:12],
+                "kp": vals[12:16],
+                "ki": vals[16:20],
+                "kd": vals[20:24]
+            }
+        # Fallback for old firmware (48 bytes)
+        elif len(data) == 48:
             vals = struct.unpack("<12f", data)
             return {
                 "target": vals[0:4],
                 "current": vals[4:8],
-                "error": vals[8:12]
+                "error": vals[8:12],
+                "kp": [0.0]*4, "ki": [0.0]*4, "kd": [0.0]*4
             }
     except:
         pass

@@ -61,6 +61,9 @@ typedef struct {
     float target[4];
     float current[4];
     float error[4];
+    float kp[4];
+    float ki[4];
+    float kd[4];
 } pid_debug_msg_t;
 
 /* Shared global variables */
