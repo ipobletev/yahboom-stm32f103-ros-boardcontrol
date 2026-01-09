@@ -8,6 +8,14 @@ The system uses a binary Serial UART protocol for communication between the PC a
 
 https://www.yahboom.net/study/ROS-Driver-Board
 
+## 📚 Documentation
+
+For more detailed information about the system design and protocols, please refer to the following documents:
+
+- [**Architecture Overview**](docs/architecture.md): High-level system design and component interactions.
+- [**Abstraction Layers**](docs/abstraction_layers.md): Detailed explanation of the modular firmware structure (App, BSP, Core).
+- [**Serial Topics**](docs/serial_topics.md): Specification of the binary communication protocol used for PC-Board telemetry and control.
+
 
 ## 🚀 Key Features
 
@@ -33,11 +41,14 @@ https://www.yahboom.net/study/ROS-Driver-Board
 - **Dynamic Configuration**: Modify PID parameters and system settings on-the-fly via the serial link.
 
 ### GUI Gallery
-| Dashboard & 3D | Raw Data & Control |
+|  |  |
 |---|---|
+| Dashboard Raw Data | IMU Data |
 | ![GUI 1](docs/media/gui1.png) | ![GUI 2](docs/media/gui2.png) |
-| **System Status** | **Data Recording** |
+| System Status | 3D Orientation |
 | ![GUI 3](docs/media/gui3.png) | ![GUI 4](docs/media/gui4.png) |
+| PID Control | Connection Frequency |
+| ![GUI 5](docs/media/gui5.png) | ![GUI 6](docs/media/gui6.png) |
 
 ## 📂 Project Structure
 
