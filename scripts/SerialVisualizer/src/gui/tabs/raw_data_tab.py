@@ -87,6 +87,9 @@ class RawDataTab(QWidget):
         
         layout.addLayout(dash_layout)
 
+        # Data Area (IMU & PID)
+        data_layout = QHBoxLayout()
+
         # IMU Raw values
         imu_group = QGroupBox("IMU Raw Data")
         imu_grid = QGridLayout(imu_group)
@@ -107,7 +110,29 @@ class RawDataTab(QWidget):
         imu_grid.addWidget(QLabel("<b>Freq:</b>"), 3, 0)
         imu_grid.addWidget(self.lbl_freq_imu, 3, 1)
         
-        layout.addWidget(imu_group)
+        data_layout.addWidget(imu_group)
+
+        # PID Raw Data
+        pid_group = QGroupBox("PID Raw Data")
+        pid_grid = QGridLayout(pid_group)
+        self.lbl_pid_target = [QLabel("-") for _ in range(4)]
+        self.lbl_pid_current = [QLabel("-") for _ in range(4)]
+        self.lbl_pid_error = [QLabel("-") for _ in range(4)]
+        
+        wheels = ["FL", "FR", "BL", "BR"]
+        pid_grid.addWidget(QLabel("<b>Wheel</b>"), 0, 0)
+        pid_grid.addWidget(QLabel("<b>Target</b>"), 0, 1)
+        pid_grid.addWidget(QLabel("<b>Current</b>"), 0, 2)
+        pid_grid.addWidget(QLabel("<b>Error</b>"), 0, 3)
+        
+        for i in range(4):
+            pid_grid.addWidget(QLabel(wheels[i]), i+1, 0)
+            pid_grid.addWidget(self.lbl_pid_target[i], i+1, 1)
+            pid_grid.addWidget(self.lbl_pid_current[i], i+1, 2)
+            pid_grid.addWidget(self.lbl_pid_error[i], i+1, 3)
+            
+        data_layout.addWidget(pid_group)
+        layout.addLayout(data_layout)
 
         # Control Row
         self.ctrl_group = QGroupBox("Control")
@@ -228,6 +253,12 @@ class RawDataTab(QWidget):
         for i in range(min(len(encoders), 4)):
             self.lbl_encs[i].setText(str(encoders[i]))
 
+    def update_pid_labels(self, pid_debug):
+        for i in range(4):
+            self.lbl_pid_target[i].setText(f"{pid_debug['target'][i]:.2f}")
+            self.lbl_pid_current[i].setText(f"{pid_debug['current'][i]:.2f}")
+            self.lbl_pid_error[i].setText(f"{pid_debug['error'][i]:.2f}")
+
     def set_freqs(self, freqs):
         # freqs is a dict {topic_id: freq}
         # Mapping hardcoded for now or use protocol constants if possible
@@ -241,7 +272,8 @@ class RawDataTab(QWidget):
                     self.lbl_temperature, self.lbl_error_code, self.lbl_angular_velocity]:
             lbl.setText("-")
             lbl.setStyleSheet("")
-        for lbl in self.lbl_encs + self.lbl_acc + self.lbl_gyro + self.lbl_mag:
+        for lbl in self.lbl_encs + self.lbl_acc + self.lbl_gyro + self.lbl_mag + \
+                   self.lbl_pid_target + self.lbl_pid_current + self.lbl_pid_error:
             lbl.setText("-")
         self.lbl_freq_machine.setText("0.0 Hz")
         self.lbl_freq_imu.setText("0.0 Hz")

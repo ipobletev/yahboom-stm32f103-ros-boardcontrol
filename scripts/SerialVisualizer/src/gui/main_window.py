@@ -46,7 +46,18 @@ class SerialVisualizerWindow(QMainWindow):
         self.playback_timer.timeout.connect(self.update_playback)
         self.playback_interval = 50 # ms
 
-        # Heartbeat timer (2s)
+        # CSV Configuration
+        self.csv_fieldnames = [
+            "timestamp", "state", "mode", "wheels", "spatial", "error", 
+            "roll", "pitch", "velocity", "battery", "temperature", "angular_velocity",
+            "acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z", "mag_x", "mag_y", "mag_z",
+            "enc_fl", "enc_fr", "enc_bl", "enc_br",
+            "pid_fl_target", "pid_fl_current", "pid_fl_error",
+            "pid_fr_target", "pid_fr_current", "pid_fr_error",
+            "pid_bl_target", "pid_bl_current", "pid_bl_error",
+            "pid_br_target", "pid_br_current", "pid_br_error"
+        ]
+        self.current_data_cache = {k: 0.0 for k in self.csv_fieldnames if k != "timestamp"}
         self.heartbeat_timer = QTimer()
         self.heartbeat_timer.timeout.connect(self.send_heartbeat)
 
@@ -189,7 +200,13 @@ class SerialVisualizerWindow(QMainWindow):
         elif topic_id == self.serial_manager.protocol.TOPIC_PUB_PID_DEBUG:
             pid_debug = parse_pid_debug(payload)
             if pid_debug:
+                self.raw_tab.update_pid_labels(pid_debug)
                 self.pid_tuning_tab.update_pid_debug(pid_debug)
+                # Update cache for recording
+                for i, wheel in enumerate(["fl", "fr", "bl", "br"]):
+                    self.current_data_cache[f"pid_{wheel}_target"] = pid_debug["target"][i]
+                    self.current_data_cache[f"pid_{wheel}_current"] = pid_debug["current"][i]
+                    self.current_data_cache[f"pid_{wheel}_error"] = pid_debug["error"][i]
 
         if self.is_recording:
             row = {"timestamp": time.time() - self.recording_start_time}
@@ -300,7 +317,7 @@ class SerialVisualizerWindow(QMainWindow):
         path, _ = QFileDialog.getSaveFileName(self, "Save Recording", name, "CSV (*.csv)")
         if path:
             with open(path, 'w', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=self.recorded_data[0].keys())
+                writer = csv.DictWriter(f, fieldnames=self.csv_fieldnames)
                 writer.writeheader()
                 writer.writerows(self.recorded_data)
 
@@ -309,12 +326,24 @@ class SerialVisualizerWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, "Load Recording", "", "CSV (*.csv)")
         if path:
             self.playback_data = []
-            with open(path, 'r') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    self.playback_data.append({k: (float(v) if k != "timestamp" else v) for k, v in row.items()})
-            self.raw_tab.lbl_loaded_file.setText(os.path.basename(path))
-            self.raw_tab.btn_play_pause.setEnabled(True)
+            try:
+                with open(path, 'r') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        cleaned_row = {}
+                        for k, v in row.items():
+                            try:
+                                # Convert to float if possible, else keep as is (or handle bools/ints)
+                                if v.lower() == 'true': cleaned_row[k] = 1.0
+                                elif v.lower() == 'false': cleaned_row[k] = 0.0
+                                else: cleaned_row[k] = float(v)
+                            except (ValueError, TypeError):
+                                cleaned_row[k] = v
+                        self.playback_data.append(cleaned_row)
+                self.raw_tab.lbl_loaded_file.setText(os.path.basename(path))
+                self.raw_tab.btn_play_pause.setEnabled(True)
+            except Exception as e:
+                print(f"Error loading CSV: {e}")
 
     def toggle_playback(self, active):
         if active:
@@ -346,5 +375,15 @@ class SerialVisualizerWindow(QMainWindow):
             "temperature": row["temperature"], "angular_velocity": row.get("angular_velocity", 0.0)
         })
         self.raw_tab.update_encoder_labels([row["enc_fl"], row["enc_fr"], row["enc_bl"], row["enc_br"]])
+        
+        # Update PID from cache if available
+        if "pid_fl_target" in row:
+            pid_data = {
+                "target": [row["pid_fl_target"], row["pid_fr_target"], row["pid_bl_target"], row["pid_br_target"]],
+                "current": [row["pid_fl_current"], row["pid_fr_current"], row["pid_bl_current"], row["pid_br_current"]],
+                "error": [row["pid_fl_error"], row["pid_fr_error"], row["pid_bl_error"], row["pid_br_error"]]
+            }
+            self.raw_tab.update_pid_labels(pid_data)
+            
         self.graphs_tab.update_from_cache(row)
         self.view_3d_tab.update_orientation(row)
