@@ -52,28 +52,28 @@ osThreadId_t AppControllerHandle;
 const osThreadAttr_t AppController_attributes = {
   .name = "AppController",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for AppEncoder */
 osThreadId_t AppEncoderHandle;
 const osThreadAttr_t AppEncoder_attributes = {
   .name = "AppEncoder",
   .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityBelowNormal,
 };
 /* Definitions for AppIMU */
 osThreadId_t AppIMUHandle;
 const osThreadAttr_t AppIMU_attributes = {
   .name = "AppIMU",
   .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for AppManager */
 osThreadId_t AppManagerHandle;
 const osThreadAttr_t AppManager_attributes = {
   .name = "AppManager",
-  .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .stack_size = 1048 * 4,
+  .priority = (osPriority_t) osPriorityBelowNormal,
 };
 /* Definitions for AppHearthbeat */
 osThreadId_t AppHearthbeatHandle;
