@@ -1,0 +1,36 @@
+name: STM32 Build Check
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install ARM GCC and build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi ninja-build cmake
+
+    - name: Configure CMake
+      run: cmake --preset Release
+
+    - name: Build
+      run: cmake --build --preset Release
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: stm32-binaries-${{ github.sha }}
+        path: |
+          build/Release/*.elf
+          build/Release/*.bin
+          build/Release/*.hex

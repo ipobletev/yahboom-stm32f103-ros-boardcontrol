@@ -1,0 +1,39 @@
+name: STM32 Main Release
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install ARM GCC and build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi ninja-build cmake
+
+    - name: Configure CMake
+      run: cmake --preset Release
+
+    - name: Build
+      run: cmake --build --preset Release
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        name: Release v${{ github.run_number }}
+        draft: false
+        prerelease: false
+        files: |
+          build/Release/*.elf
+          build/Release/*.bin
+          build/Release/*.hex
