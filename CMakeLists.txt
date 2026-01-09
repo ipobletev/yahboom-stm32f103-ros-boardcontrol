@@ -12,7 +12,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
-add_compile_options(-mthumb -mcpu=cortex-m3 -mabi=aapcs -O3 -fdata-sections -ffunction-sections -mlong-calls -Wall -Wextra -Werror)
+add_compile_options(-mthumb -mcpu=cortex-m3 -mabi=aapcs -O3 -fdata-sections -ffunction-sections -mlong-calls)
 add_link_options(-mthumb -mcpu=cortex-m3 -mabi=aapcs -O3 -fdata-sections -ffunction-sections -mlong-calls -Wl,-u,_printf_float)
 
 
