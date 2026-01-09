@@ -15,6 +15,14 @@ The system is organized into four distinct layers to promote modularity and hard
 
 ---
 
+## Start Sequence
+
+The following diagram illustrates the boot process and initialization sequence of the system to move the robot:
+
+![Start Sequence](./media/start_sequence.png)
+
+---
+
 ## State Machine
 
 The robot operates under a centralized state machine managed by the **AppManager**, as shown in the following diagram from [task_controller.c](../App\Main\Src\task_controller.c)
