@@ -11,12 +11,13 @@ import serial.tools.list_ports
 import numpy as np
 
 from communication.serial_manager import SerialManager
-from core.protocol import parse_machine_info, parse_imu, parse_encoder, pack_cmd_vel, pack_enum
+from core.protocol import parse_machine_info, parse_imu, parse_encoder, parse_pid_debug, pack_cmd_vel, pack_enum, pack_config
 from gui.tabs.raw_data_tab import RawDataTab
 from gui.tabs.graphs_tab import GraphsTab
 from gui.tabs.status_tab import StatusTab
 from gui.tabs.view_3d_tab import View3DTab
 from gui.tabs.connection_tab import ConnectionTab
+from gui.tabs.pid_tuning_tab import PIDTuningTab
 
 class SerialVisualizerWindow(QMainWindow):
     def __init__(self):
@@ -108,9 +109,11 @@ class SerialVisualizerWindow(QMainWindow):
         self.status_tab = StatusTab(self.sys_errors)
         self.view_3d_tab = View3DTab()
         self.conn_tab = ConnectionTab()
+        self.pid_tuning_tab = PIDTuningTab()
         
         self.tabs.addTab(self.raw_tab, "Raw Data")
         self.tabs.addTab(self.graphs_tab, "Graphs")
+        self.tabs.addTab(self.pid_tuning_tab, "PID Tuning")
         self.tabs.addTab(self.status_tab, "System Status")
         self.tabs.addTab(self.view_3d_tab, "3D Orientation")
         self.tabs.addTab(self.conn_tab, "Connection Freq")
@@ -130,6 +133,10 @@ class SerialVisualizerWindow(QMainWindow):
         self.raw_tab.recording_toggled.connect(self.toggle_recording)
         self.raw_tab.csv_load_requested.connect(self.load_csv)
         self.raw_tab.playback_toggled.connect(self.toggle_playback)
+        
+        # PID Tuning Tab Signals
+        self.pid_tuning_tab.pid_update_requested.connect(self.send_pid_config)
+        self.pid_tuning_tab.wheel_diam_update_requested.connect(self.send_wheel_config)
 
     @Slot(int, bytes)
     def handle_serial_data(self, topic_id, payload):
@@ -178,6 +185,11 @@ class SerialVisualizerWindow(QMainWindow):
                 })
                 self.raw_tab.update_encoder_labels(encoders)
                 self.graphs_tab.update_encoders(encoders)
+
+        elif topic_id == self.serial_manager.protocol.TOPIC_PUB_PID_DEBUG:
+            pid_debug = parse_pid_debug(payload)
+            if pid_debug:
+                self.pid_tuning_tab.update_pid_debug(pid_debug)
 
         if self.is_recording:
             row = {"timestamp": time.time() - self.recording_start_time}
@@ -234,8 +246,16 @@ class SerialVisualizerWindow(QMainWindow):
         self.raw_tab.reset_placeholders()
         self.status_tab.reset_placeholders()
         self.conn_tab.reset_placeholders()
+        self.pid_tuning_tab.reset_placeholders()
 
     # Commands
+    def send_pid_config(self, motor_id, values):
+        # item_id for motor PID is same as motor_id (0-3)
+        self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_CONFIG, pack_config(motor_id, values))
+
+    def send_wheel_config(self, diameter):
+        # item_id for wheel diameter is 4
+        self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_CONFIG, pack_config(4, diameter))
     def send_velocity(self, lx, az):
         self.serial_manager.write(self.serial_manager.protocol.TOPIC_SUB_CMD_VEL, pack_cmd_vel(lx, 0, 0, az))
 

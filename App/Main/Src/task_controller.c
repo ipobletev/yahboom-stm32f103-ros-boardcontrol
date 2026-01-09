@@ -6,7 +6,9 @@
 #include "io_key.h"
 #include "io_buzzer.h"
 #include <stdio.h>
+#include <string.h>
 #include "config.h"
+#include "storage.h"
 
 extern cmd_vel_t last_cmd;
 
@@ -23,6 +25,31 @@ extern cmd_vel_t last_cmd;
     }
 
 // Seriel Reception for ROS commands
+#if STORAGE_ENABLED
+static void save_current_config(void) {
+    app_config_t cfg;
+    cfg.wheel_diameter = g_wheel_diameter;
+    
+    cfg.pid[0].kp = motor_fl.pid.Kp;
+    cfg.pid[0].ki = motor_fl.pid.Ki;
+    cfg.pid[0].kd = motor_fl.pid.Kd;
+    
+    cfg.pid[1].kp = motor_fr.pid.Kp;
+    cfg.pid[1].ki = motor_fr.pid.Ki;
+    cfg.pid[1].kd = motor_fr.pid.Kd;
+    
+    cfg.pid[2].kp = motor_bl.pid.Kp;
+    cfg.pid[2].ki = motor_bl.pid.Ki;
+    cfg.pid[2].kd = motor_bl.pid.Kd;
+    
+    cfg.pid[3].kp = motor_br.pid.Kp;
+    cfg.pid[3].ki = motor_br.pid.Ki;
+    cfg.pid[3].kd = motor_br.pid.Kd;
+
+    storage_save(&cfg);
+}
+#endif
+
 static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint8_t length) {
 
     APP_DEBUG_INFO("RECEIVER", "Received ROS frame: topic_id=%d, length=%d", topic_id, length);
@@ -109,6 +136,43 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
                     .timestamp = osKernelGetTickCount() 
                 };
                 osMessageQueuePut(system_msg_queue, &msg, 0, 0);
+            }
+            break;
+
+        case TOPIC_CONFIG:
+            if (length >= 1) {
+                uint8_t item_id = payload[0];
+                if (item_id >= CONFIG_ITEM_PID_M1 && item_id <= CONFIG_ITEM_PID_M4) {
+                    if (length == 13) { // 1 byte item_id + 3 floats (12 bytes)
+                        float kp, ki, kd;
+                        memcpy(&kp, &payload[1], 4);
+                        memcpy(&ki, &payload[5], 4);
+                        memcpy(&kd, &payload[9], 4);
+                        motor_t *m = NULL;
+                        if (item_id == CONFIG_ITEM_PID_M1) m = &motor_fl;
+                        else if (item_id == CONFIG_ITEM_PID_M2) m = &motor_fr;
+                        else if (item_id == CONFIG_ITEM_PID_M3) m = &motor_bl;
+                        else if (item_id == CONFIG_ITEM_PID_M4) m = &motor_br;
+                        
+                        if (m != NULL) {
+                            motor_set_pid_gains(m, kp, ki, kd);
+                            APP_DEBUG_INFO("RECEIVER", "Updated PID for Motor %d: %.2f, %.2f, %.2f", item_id + 1, kp, ki, kd);
+#if STORAGE_ENABLED
+                            save_current_config();
+#endif
+                        }
+                    }
+                } else if (item_id == CONFIG_ITEM_WHEEL_DIAM) {
+                    if (length == 5) { // 1 byte item_id + 1 float (4 bytes)
+                        float diam;
+                        memcpy(&diam, &payload[1], 4);
+                        g_wheel_diameter = diam;
+                        APP_DEBUG_INFO("RECEIVER", "Updated Wheel Diameter: %.4f", g_wheel_diameter);
+#if STORAGE_ENABLED
+                        save_current_config();
+#endif
+                    }
+                }
             }
             break;
 

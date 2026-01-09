@@ -108,6 +108,10 @@ class ConnectionTab(QWidget):
 
     def update_frame(self, topic_id):
         """Called whenever a frame is received to update instantaneous stats."""
+        # Only track topics we are interested in for frequency analysis
+        if topic_id not in self.inst_freq_data:
+            return
+            
         now = time.time() * 1000 # ms
         if self.last_frame_time.get(topic_id, 0) > 0:
             dt = now - self.last_frame_time[topic_id]

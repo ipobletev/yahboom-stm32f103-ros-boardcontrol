@@ -12,14 +12,26 @@
 #include "io_led.h"
 #include "serial_ros.h"
 #include "config.h"
+#include "storage.h"
 
 osTimerId_t state_pub_timer_id;
+osTimerId_t pid_debug_timer_id;
 
 void state_moving(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
 void state_idle(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
 void state_error(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
 void state_temporal_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
 void state_emergency_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
+
+void PidDebugTimerCallback(void *argument)
+{
+    pid_debug_msg_t msg = {
+        .target = {motor_fl.pid.target, motor_fr.pid.target, motor_bl.pid.target, motor_br.pid.target},
+        .current = {motor_fl.pid.current, motor_fr.pid.current, motor_bl.pid.current, motor_br.pid.current},
+        .error = {motor_fl.pid.error[0], motor_fr.pid.error[0], motor_bl.pid.error[0], motor_br.pid.error[0]}
+    };
+    serial_ros_publish(TOPIC_PID_DEBUG, (uint8_t*)&msg, sizeof(msg));
+}
 
 
 void StatePubTimerCallback(void *argument)
@@ -46,7 +58,7 @@ void StatePubTimerCallback(void *argument)
       }
       float avg_delta = (float)delta_sum / 4.0f;
       // v = (delta / dt) * (PI * D / PPR)
-      velocity = (avg_delta / dt) * (3.14159f * WHEEL_DIAMETER / ENCODER_PPR);
+      velocity = (avg_delta / dt) * (3.14159f * g_wheel_diameter / ENCODER_PPR);
   }
   
   // Update history
@@ -79,14 +91,6 @@ void AppManagerTask(void *argument) {
 
     //Initialize buzzer
     io_buzzer_init();
-    
-    //Initialize motors
-    motor_t motor_fl, motor_fr, motor_bl, motor_br;
-    //clean
-    memset(&motor_fl, 0, sizeof(motor_t));
-    memset(&motor_fr, 0, sizeof(motor_t));
-    memset(&motor_bl, 0, sizeof(motor_t));
-    memset(&motor_br, 0, sizeof(motor_t));
     
     // Initialize motors with default config
     motor_config_t motor_fl_cfg = {
@@ -136,18 +140,35 @@ void AppManagerTask(void *argument) {
     m_ok &= motor_init(&motor_bl, &motor_bl_cfg, MOTOR_ID_3);
     m_ok &= motor_init(&motor_br, &motor_br_cfg, MOTOR_ID_4);
 
+    // Load persistent config if available
+#if STORAGE_ENABLED
+    app_config_t storage_cfg;
+    if (storage_load(&storage_cfg)) {
+        APP_DEBUG_INFO("MANAGER", "Applying persistent configuration from Flash");
+        g_wheel_diameter = storage_cfg.wheel_diameter;
+        motor_set_pid_gains(&motor_fl, storage_cfg.pid[0].kp, storage_cfg.pid[0].ki, storage_cfg.pid[0].kd);
+        motor_set_pid_gains(&motor_fr, storage_cfg.pid[1].kp, storage_cfg.pid[1].ki, storage_cfg.pid[1].kd);
+        motor_set_pid_gains(&motor_bl, storage_cfg.pid[2].kp, storage_cfg.pid[2].ki, storage_cfg.pid[2].kd);
+        motor_set_pid_gains(&motor_br, storage_cfg.pid[3].kp, storage_cfg.pid[3].ki, storage_cfg.pid[3].kd);
+    }
+#endif
+
     if (!m_ok) {
         APP_DEBUG_ERROR("MANAGER", "Motor initialization failed!");
         global_system_error |= SYS_ERROR_MOTOR_INIT;
     }
 
-    // Initialize and start state publisher timer
+    // Initialize and start timers
     state_pub_timer_id = osTimerNew(StatePubTimerCallback, osTimerPeriodic, NULL, NULL);
     if (state_pub_timer_id != NULL) {
         osTimerStart(state_pub_timer_id, TIME_MACHINE_INFO_PUBLISH_MS);
         APP_DEBUG_INFO("MANAGER", "State publisher timer started (%d ms)", TIME_MACHINE_INFO_PUBLISH_MS);
-    } else {
-        APP_DEBUG_ERROR("MANAGER", "Failed to create state publisher timer");
+    }
+
+    pid_debug_timer_id = osTimerNew(PidDebugTimerCallback, osTimerPeriodic, NULL, NULL);
+    if (pid_debug_timer_id != NULL) {
+        osTimerStart(pid_debug_timer_id, TIME_PID_DEBUG_PUBLISH_MS);
+        APP_DEBUG_INFO("MANAGER", "PID debug timer started (%d ms)", TIME_PID_DEBUG_PUBLISH_MS);
     }
 
     while (1) {

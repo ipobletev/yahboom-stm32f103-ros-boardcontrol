@@ -57,6 +57,12 @@ typedef struct {
 extern machine_info_t machine_info;
 extern int32_t g_encoder_counts[4]; 
 
+typedef struct {
+    float target[4];
+    float current[4];
+    float error[4];
+} pid_debug_msg_t;
+
 /* Shared global variables */
 extern osMessageQueueId_t system_msg_queue;
 extern system_state_t current_state;
@@ -77,6 +83,7 @@ typedef struct {
 extern cmd_vel_t last_cmd;
 
 // /* Shared motor instances */
-// extern motor_t motor_fl, motor_fr, motor_bl, motor_br;
+extern motor_t motor_fl, motor_fr, motor_bl, motor_br;
+extern float g_wheel_diameter;
 
 #endif // APP_H

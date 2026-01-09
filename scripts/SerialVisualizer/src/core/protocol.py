@@ -14,7 +14,9 @@ class SerialProtocol:
     TOPIC_SUB_OPERATION_RUN = 0x06
     TOPIC_SUB_RESET_STOP_CMD = 0x07
     TOPIC_SUB_ESTOP_CMD = 0x08
+    TOPIC_PUB_PID_DEBUG = 0x09
     TOPIC_SUB_CONFIRM_CONN = 0x0A
+    TOPIC_SUB_CONFIG = 0x0B
 
     # States for unpacking
     STATE_WAIT_H1 = 0
@@ -156,8 +158,32 @@ def parse_encoder(data):
         pass
     return None
 
+def parse_pid_debug(data):
+    # struct { float target[4], current[4], error[4] } -> 12 floats = 48 bytes
+    try:
+        if len(data) == 48:
+            vals = struct.unpack("<12f", data)
+            return {
+                "target": vals[0:4],
+                "current": vals[4:8],
+                "error": vals[8:12]
+            }
+    except:
+        pass
+    return None
+
 def pack_cmd_vel(lx, ly, lz, az):
     return struct.pack("<4f", lx, ly, lz, az)
 
 def pack_enum(val):
     return struct.pack("B", val)
+
+def pack_config(item_id, values):
+    """
+    Pack configuration update.
+    'values' should be a list of floats (e.g. [kp, ki, kd]) or a single float (diameter).
+    """
+    if hasattr(values, '__iter__'):
+        return struct.pack("<B" + "f"*len(values), item_id, *values)
+    else:
+        return struct.pack("<Bf", item_id, values)
