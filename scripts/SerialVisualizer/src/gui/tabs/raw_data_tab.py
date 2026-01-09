@@ -33,12 +33,13 @@ class RawDataTab(QWidget):
         self.lbl_mode = QLabel("-")
         self.lbl_moving_wheels = QLabel("-")
         self.lbl_moving_spatial = QLabel("-")
+        self.lbl_estop = QLabel("-")
         self.lbl_roll = QLabel("-")
         self.lbl_pitch = QLabel("-")
         self.lbl_velocity = QLabel("-")
+        self.lbl_angular_velocity = QLabel("-")
         self.lbl_battery = QLabel("-")
         self.lbl_temperature = QLabel("-")
-        self.lbl_angular_velocity = QLabel("-")
         self.lbl_error_code = QLabel("-")
         
         info_grid.addWidget(QLabel("State:"), 0, 0)
@@ -49,24 +50,26 @@ class RawDataTab(QWidget):
         info_grid.addWidget(self.lbl_moving_wheels, 2, 1)
         info_grid.addWidget(QLabel("Moving (Spatial):"), 3, 0)
         info_grid.addWidget(self.lbl_moving_spatial, 3, 1)
-        info_grid.addWidget(QLabel("Roll:"), 4, 0)
-        info_grid.addWidget(self.lbl_roll, 4, 1)
-        info_grid.addWidget(QLabel("Pitch:"), 5, 0)
-        info_grid.addWidget(self.lbl_pitch, 5, 1)
-        info_grid.addWidget(QLabel("Velocity:"), 6, 0)
-        info_grid.addWidget(self.lbl_velocity, 6, 1)
-        info_grid.addWidget(QLabel("Ang. Vel:"), 7, 0)
-        info_grid.addWidget(self.lbl_angular_velocity, 7, 1)
-        info_grid.addWidget(QLabel("Battery:"), 8, 0)
-        info_grid.addWidget(self.lbl_battery, 8, 1)
-        info_grid.addWidget(QLabel("Temp:"), 9, 0)
-        info_grid.addWidget(self.lbl_temperature, 9, 1)
-        info_grid.addWidget(QLabel("<b>Error Code:</b>"), 10, 0)
-        info_grid.addWidget(self.lbl_error_code, 10, 1)
+        info_grid.addWidget(QLabel("<b>E-STOP:</b>"), 4, 0)
+        info_grid.addWidget(self.lbl_estop, 4, 1)
+        info_grid.addWidget(QLabel("Roll:"), 5, 0)
+        info_grid.addWidget(self.lbl_roll, 5, 1)
+        info_grid.addWidget(QLabel("Pitch:"), 6, 0)
+        info_grid.addWidget(self.lbl_pitch, 6, 1)
+        info_grid.addWidget(QLabel("Velocity:"), 7, 0)
+        info_grid.addWidget(self.lbl_velocity, 7, 1)
+        info_grid.addWidget(QLabel("Ang. Vel:"), 8, 0)
+        info_grid.addWidget(self.lbl_angular_velocity, 8, 1)
+        info_grid.addWidget(QLabel("Battery:"), 9, 0)
+        info_grid.addWidget(self.lbl_battery, 9, 1)
+        info_grid.addWidget(QLabel("Temp:"), 10, 0)
+        info_grid.addWidget(self.lbl_temperature, 10, 1)
+        info_grid.addWidget(QLabel("<b>Error Code:</b>"), 11, 0)
+        info_grid.addWidget(self.lbl_error_code, 11, 1)
         
         self.lbl_freq_machine = QLabel("0.0 Hz")
-        info_grid.addWidget(QLabel("Freq:"), 11, 0)
-        info_grid.addWidget(self.lbl_freq_machine, 11, 1)
+        info_grid.addWidget(QLabel("Freq:"), 12, 0)
+        info_grid.addWidget(self.lbl_freq_machine, 12, 1)
         
         dash_layout.addWidget(info_group)
 
@@ -238,6 +241,7 @@ class RawDataTab(QWidget):
         self.lbl_mode.setText(modes[info["mode"]] if info["mode"] < len(modes) else str(info["mode"]))
         self.lbl_moving_wheels.setText("YES" if info["moving_wheels"] else "NO")
         self.lbl_moving_spatial.setText("YES" if info["moving_spatial"] else "NO")
+        self.lbl_estop.setText("ACTIVE" if info.get("estop", False) else "OFF")
         self.lbl_roll.setText(f"{info['roll']:.1f}°")
         self.lbl_pitch.setText(f"{info['pitch']:.1f}°")
         self.lbl_velocity.setText(f"{info['velocity']:.2f} m/s")
@@ -248,6 +252,7 @@ class RawDataTab(QWidget):
         
         self.lbl_moving_wheels.setStyleSheet("color: lime; font-weight: bold;" if info["moving_wheels"] else "color: gray;")
         self.lbl_moving_spatial.setStyleSheet("color: orange; font-weight: bold;" if info["moving_spatial"] else "color: gray;")
+        self.lbl_estop.setStyleSheet("color: red; font-weight: bold;" if info.get("estop", False) else "color: gray;")
         self.lbl_error_code.setStyleSheet("color: red; font-weight: bold;" if info["error_code"] != 0 else "color: gray;")
         if info["state"] == 3: self.lbl_state.setStyleSheet("color: red; font-weight: bold;")
         else: self.lbl_state.setStyleSheet("")
@@ -282,7 +287,7 @@ class RawDataTab(QWidget):
     def reset_placeholders(self):
         for lbl in [self.lbl_state, self.lbl_mode, self.lbl_moving_wheels, self.lbl_moving_spatial,
                     self.lbl_roll, self.lbl_pitch, self.lbl_velocity, self.lbl_battery, 
-                    self.lbl_temperature, self.lbl_error_code, self.lbl_angular_velocity]:
+                    self.lbl_temperature, self.lbl_error_code, self.lbl_angular_velocity, self.lbl_estop]:
             lbl.setText("-")
             lbl.setStyleSheet("")
         for lbl in self.lbl_encs + self.lbl_acc + self.lbl_gyro + self.lbl_mag + \

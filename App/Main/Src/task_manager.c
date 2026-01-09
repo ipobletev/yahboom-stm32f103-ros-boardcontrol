@@ -21,7 +21,7 @@ void state_moving(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor
 void state_idle(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
 void state_error(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
 void state_temporal_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
-void state_emergency_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
+void state_stop_emergency(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br);
 
 void PidDebugTimerCallback(void *argument)
 {
@@ -73,6 +73,7 @@ void StatePubTimerCallback(void *argument)
     .mode = current_mode,
     .is_moving_wheels = is_moving_wheels,
     .is_moving_spatial = is_moving_spatial,
+    .estop = (current_state == STATE_STOP_EMERGENCY),
     .error_code = global_system_error,
     .roll = roll,
     .pitch = pitch,
@@ -196,8 +197,8 @@ void AppManagerTask(void *argument) {
             case STATE_TEMPORAL_STOP:
                 state_temporal_stop(&motor_fl, &motor_fr, &motor_bl, &motor_br);
                 break;
-            case STATE_EMERGENCY_STOP:
-                state_emergency_stop(&motor_fl, &motor_fr, &motor_bl, &motor_br);
+            case STATE_STOP_EMERGENCY:
+                state_stop_emergency(&motor_fl, &motor_fr, &motor_bl, &motor_br);
                 break;
             default:
                 break;
@@ -234,7 +235,7 @@ void state_moving(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor
     
 }
 
-void state_emergency_stop(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br) {
+void state_stop_emergency(motor_t *motor_fl, motor_t *motor_fr, motor_t *motor_bl, motor_t *motor_br) {
     static uint32_t last_beep = 0;
     uint32_t now = osKernelGetTickCount();
     

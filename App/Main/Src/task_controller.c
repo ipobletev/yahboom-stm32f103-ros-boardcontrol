@@ -13,7 +13,7 @@
 extern cmd_vel_t last_cmd;
 
 #define end_by_emergency_stop() \
-    if (current_state == STATE_EMERGENCY_STOP) { \
+    if (current_state == STATE_STOP_EMERGENCY) { \
         APP_DEBUG_INFO("CONTROLLER", "Ignoring command while in E-STOP"); \
         break; \
     }
@@ -132,7 +132,7 @@ static void on_ros_frame_received(uint8_t topic_id, const uint8_t *payload, uint
             end_by_manual_mode();
             if (length == 1) {
                 system_msg_t msg = { 
-                    .requested_state = STATE_EMERGENCY_STOP, 
+                    .requested_state = STATE_STOP_EMERGENCY, 
                     .timestamp = osKernelGetTickCount() 
                 };
                 osMessageQueuePut(system_msg_queue, &msg, 0, 0);
@@ -213,7 +213,7 @@ void AppControllerTask(void *argument) {
         }
 
         // 1. Check connection timeout with PC
-        if (now - last_conn_ack_tick > CONN_TIMEOUT_MS && current_state != STATE_EMERGENCY_STOP) {
+        if (now - last_conn_ack_tick > CONN_TIMEOUT_MS && current_state != STATE_STOP_EMERGENCY) {
             APP_DEBUG_ERROR("CONTROLLER", "Connection lost! Triggering E-STOP.");
             global_system_error |= SYS_ERROR_SERIAL_TIMEOUT;
         }
@@ -224,18 +224,18 @@ void AppControllerTask(void *argument) {
 
         // 2. Process emergency stop
         //  MANUAL EMERGENCY STOP -> VIA HARDWARE BUTTON
-        if (io_key_is_pressed() && current_state != STATE_EMERGENCY_STOP) {
+        if (io_key_is_pressed() && current_state != STATE_STOP_EMERGENCY) {
             APP_DEBUG_INFO("CONTROLLER", "Emergency stop! by button. Stopping motors.");
-            msg.requested_state = STATE_EMERGENCY_STOP;
+            msg.requested_state = STATE_STOP_EMERGENCY;
             send_msg = true;
 
         }
 
         #ifdef APP_USE_HARDWARE_ERROR
         // 3. Process hardware errors
-        if (global_system_error != SYS_ERROR_NONE && current_state != STATE_EMERGENCY_STOP) {
+        if (global_system_error != SYS_ERROR_NONE && current_state != STATE_STOP_EMERGENCY) {
             APP_DEBUG_ERROR("CONTROLLER", "Hardware error detected: 0x%08lX! Triggering E-STOP.", global_system_error);
-            msg.requested_state = STATE_EMERGENCY_STOP;
+            msg.requested_state = STATE_STOP_EMERGENCY;
             send_msg = true;
         }
         #endif

@@ -98,14 +98,15 @@ class SerialProtocol:
 # Data Structure Parsers
 def parse_machine_info(data):
     try:
-        # struct machine_info { uint8_t, uint8_t, uint8_t, uint8_t, uint32_t, float, float, float, float, float, float } -> 32 bytes
-        if len(data) >= 32:
-            state, mode, wheels, spatial, error, roll, pitch, velocity, battery, temperature, angular_velocity = struct.unpack("<BBBB I ffffff", data[:32])
+        # struct machine_info { uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, pad[3], uint32_t, float, float, float, float, float, float } -> 36 bytes
+        if len(data) >= 36:
+            state, mode, wheels, spatial, estop, error, roll, pitch, velocity, battery, temperature, angular_velocity = struct.unpack("<BBBBB 3x I ffffff", data[:36])
             return {
                 "state": state, 
                 "mode": mode, 
                 "moving_wheels": bool(wheels),
                 "moving_spatial": bool(spatial),
+                "estop": bool(estop),
                 "error_code": error,
                 "roll": roll,
                 "pitch": pitch,
@@ -114,21 +115,22 @@ def parse_machine_info(data):
                 "temperature": temperature,
                 "angular_velocity": angular_velocity
             }
-        # Fallback for old firmware (28 bytes)
-        elif len(data) >= 28:
-            state, mode, wheels, spatial, error, roll, pitch, velocity, battery, temperature = struct.unpack("<BBBB I fffff", data[:28])
+        # Intermediate version (32 bytes)
+        elif len(data) >= 32:
+            state, mode, wheels, spatial, error, roll, pitch, velocity, battery, temperature, angular_velocity = struct.unpack("<BBBB I ffffff", data[:32])
             return {
                 "state": state, 
                 "mode": mode, 
                 "moving_wheels": bool(wheels),
                 "moving_spatial": bool(spatial),
+                "estop": (state == 3), # Heuristic: STATE_STOP_EMERGENCY = 3
                 "error_code": error,
                 "roll": roll,
                 "pitch": pitch,
                 "velocity": velocity,
                 "battery": battery,
                 "temperature": temperature,
-                "angular_velocity": 0.0 # Default value
+                "angular_velocity": angular_velocity
             }
     except:
         pass

@@ -22,7 +22,7 @@ typedef enum {
     STATE_IDLE,
     STATE_MOVING,
     STATE_TEMPORAL_STOP,
-    STATE_EMERGENCY_STOP
+    STATE_STOP_EMERGENCY
 } system_state_t;
 
 /**
@@ -45,6 +45,7 @@ typedef struct {
     operation_mode_t mode;
     bool is_moving_wheels;
     bool is_moving_spatial;
+    bool estop;
     uint32_t error_code;
     float roll;      // inclination roll (deg)
     float pitch;     // inclination pitch (deg)
