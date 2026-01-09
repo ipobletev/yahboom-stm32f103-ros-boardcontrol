@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 class ConnectionTab(QWidget):
-    def __init__(self, max_points=100):
+    def __init__(self, max_points=86400):
         super().__init__()
         self.max_points = max_points
         # Store frequencies for Machine Info (0x01), IMU (0x02), Encoder (0x03)
@@ -12,6 +12,12 @@ class ConnectionTab(QWidget):
             0x01: np.zeros(self.max_points),
             0x02: np.zeros(self.max_points),
             0x03: np.zeros(self.max_points)
+        }
+        self.max_points_inst = 500 # Recent burst history
+        self.inst_freq_data = {
+            0x01: np.zeros(self.max_points_inst),
+            0x02: np.zeros(self.max_points_inst),
+            0x03: np.zeros(self.max_points_inst)
         }
         self.setup_ui()
 
@@ -31,32 +37,28 @@ class ConnectionTab(QWidget):
             0x03: self.plot_freq.plot(pen='b', name='Encoder')
         }
         
-        # Jitter Plot (Time between frames)
-        self.plot_jitter = pg.PlotWidget(title="Inter-frame Latency (ms)")
-        self.plot_jitter.addLegend()
-        self.plot_jitter.setLabel('left', 'Delta Time', units='ms')
-        self.plot_jitter.setLabel('bottom', 'Samples')
-        self.plot_jitter.showGrid(x=True, y=True)
-        self.plot_jitter.setYRange(0, 500) # Should be low for stable connection
+        # Instantaneous Frequency Plot (Burst)
+        self.plot_inst = pg.PlotWidget(title="Instantaneous Frequency (Hz) - Burst View")
+        self.plot_inst.addLegend()
+        self.plot_inst.setLabel('left', 'Freq', units='Hz')
+        self.plot_inst.setLabel('bottom', 'Samples')
+        self.plot_inst.showGrid(x=True, y=True)
+        self.plot_inst.setYRange(0, 150) # Assuming most topics are below 100Hz
         
-        self.jitter_data = {
-            0x01: np.zeros(self.max_points),
-            0x02: np.zeros(self.max_points),
-            0x03: np.zeros(self.max_points)
-        }
+        # Data already initialized in __init__
         self.last_frame_time = {
             0x01: 0,
             0x02: 0,
             0x03: 0
         }
         
-        self.jitter_curves = {
-            0x01: self.plot_jitter.plot(pen='r', name='Machine Info'),
-            0x02: self.plot_jitter.plot(pen='g', name='IMU'),
-            0x03: self.plot_jitter.plot(pen='b', name='Encoder')
+        self.inst_curves = {
+            0x01: self.plot_inst.plot(pen='r', name='Machine Info'),
+            0x02: self.plot_inst.plot(pen='g', name='IMU'),
+            0x03: self.plot_inst.plot(pen='b', name='Encoder')
         }
         
-        layout.addWidget(self.plot_jitter)
+        layout.addWidget(self.plot_inst)
 
         # Statistics Group
         stats_group = QGroupBox("Transmission Statistics & Health")
@@ -87,14 +89,16 @@ class ConnectionTab(QWidget):
         layout.addStretch()
 
     def update_frame(self, topic_id):
-        """Called whenever a frame is received to update jitter data."""
+        """Called whenever a frame is received to update instantaneous stats."""
         now = time.time() * 1000 # ms
         if self.last_frame_time.get(topic_id, 0) > 0:
             dt = now - self.last_frame_time[topic_id]
-            self.jitter_data[topic_id] = np.roll(self.jitter_data[topic_id], -1)
-            self.jitter_data[topic_id][-1] = dt
-            if topic_id in self.jitter_curves:
-                self.jitter_curves[topic_id].setData(self.jitter_data[topic_id])
+            if dt > 0:
+                inst_freq = 1000.0 / dt
+                self.inst_freq_data[topic_id] = np.roll(self.inst_freq_data[topic_id], -1)
+                self.inst_freq_data[topic_id][-1] = inst_freq
+                if topic_id in self.inst_curves:
+                    self.inst_curves[topic_id].setData(self.inst_freq_data[topic_id])
         self.last_frame_time[topic_id] = now
 
     def update_freqs(self, freqs):
@@ -111,17 +115,17 @@ class ConnectionTab(QWidget):
             if val > 0:
                 self.lbl_stats[tid]["avg"].setText(f"{val:.2f} Hz")
                 
-                # Calculate avg jitter from the buffer
-                j_data = self.jitter_data[tid][self.jitter_data[tid] > 0]
-                if len(j_data) > 0:
-                    avg_j = np.mean(j_data)
-                    std_j = np.std(j_data)
-                    self.lbl_stats[tid]["jit"].setText(f"{avg_j:.1f} ± {std_j:.1f} ms")
+                # Calculate avg jitter/freq from the buffer
+                i_data = self.inst_freq_data[tid][self.inst_freq_data[tid] > 0]
+                if len(i_data) > 0:
+                    avg_f = np.mean(i_data)
+                    std_f = np.std(i_data)
+                    self.lbl_stats[tid]["jit"].setText(f"{avg_f:.1f} ± {std_f:.1f} Hz")
                     
-                    if std_j < 10: # Low jitter
+                    if std_f < 5: # Stable freq
                         self.lbl_stats[tid]["status"].setText("Stable")
                         self.lbl_stats[tid]["status"].setStyleSheet("color: green; font-weight: bold;")
-                    elif std_j < 50:
+                    elif std_f < 50:
                         self.lbl_stats[tid]["status"].setText("Intermittent")
                         self.lbl_stats[tid]["status"].setStyleSheet("color: orange; font-weight: bold;")
                     else:
@@ -134,12 +138,12 @@ class ConnectionTab(QWidget):
 
     def reset_placeholders(self):
         for tid in [0x01, 0x02, 0x03]:
-            self.freq_data[tid].fill(0)
-            self.jitter_data[tid].fill(0)
+            # self.freq_data[tid].fill(0)  # Removed to keep historical data
+            # self.inst_freq_data[tid].fill(0) # Removed to keep historical data
             self.last_frame_time[tid] = 0
-            self.curves[tid].setData(self.freq_data[tid])
-            self.jitter_curves[tid].setData(self.jitter_data[tid])
+            # self.curves[tid].setData(self.freq_data[tid])
+            # self.inst_curves[tid].setData(self.inst_freq_data[tid])
             self.lbl_stats[tid]["avg"].setText("0.00 Hz")
-            self.lbl_stats[tid]["jit"].setText("0 ms")
+            self.lbl_stats[tid]["jit"].setText("0 Hz")
             self.lbl_stats[tid]["status"].setText("Offline")
             self.lbl_stats[tid]["status"].setStyleSheet("color: gray;")

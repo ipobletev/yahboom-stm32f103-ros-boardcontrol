@@ -118,7 +118,7 @@ class SerialVisualizerWindow(QMainWindow):
         main_layout.addWidget(self.tabs)
 
     def setup_connections(self):
-        self.serial_manager.data_received.connect(self.handle_serial_data)
+        self.serial_manager.data_received.connect(self.handle_serial_data, Qt.QueuedConnection)
         
         # Raw Tab Signals
         self.raw_tab.velocity_sent.connect(self.send_velocity)
@@ -219,7 +219,8 @@ class SerialVisualizerWindow(QMainWindow):
                 info["count"] = 0
                 freqs[tid] = freq
             self.raw_tab.set_freqs(freqs)
-            self.conn_tab.update_freqs(freqs)
+            if self.board_connected:
+                self.conn_tab.update_freqs(freqs)
         self.last_stats_time = now
         
         # Watchdog

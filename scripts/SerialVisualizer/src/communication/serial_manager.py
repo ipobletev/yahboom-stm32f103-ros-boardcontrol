@@ -43,14 +43,20 @@ class SerialManager(QObject):
                 if self.serial_port and self.serial_port.in_waiting:
                     b = self.serial_port.read(1)[0]
                     res = self.protocol.unpack_byte(b)
-                    if res:
+                    if res and self.running:
                         topic_id, payload = res
-                        self.data_received.emit(topic_id, payload)
+                        try:
+                            self.data_received.emit(topic_id, payload)
+                        except RuntimeError: # Signal source has been deleted
+                            break
                 else:
                     time.sleep(0.001)
             except Exception as e:
                 if self.running:
-                    self.error_occurred.emit(f"Read error: {e}")
+                    try:
+                        self.error_occurred.emit(f"Read error: {e}")
+                    except RuntimeError:
+                        pass
                 break
 
     def write(self, topic_id, data):

@@ -40,7 +40,7 @@ void AppIMUTask(void *argument) {
             }else{
                 APP_DEBUG_INFO("IMU", "IMU Reinitialization successful!");
                 imu_was_ok = true;
-                global_system_error &= SYS_ERROR_NONE;
+                global_system_error &= ~SYS_ERROR_IMU_INIT;
             }
             
         }
