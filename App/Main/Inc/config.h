@@ -5,18 +5,12 @@
 #define TIME_ENCODER_PUBLISH_MS         100              //10Hz    
 #define TIME_IMU_PUBLISH_MS             20               //50Hz
 #define TIME_MACHINE_INFO_PUBLISH_MS    250              //4Hz
-
-// LOG DEBUG FOR PUBLISH
-#define TIME_LOG_DEBUG_ENCODER_MS 1000
-#define TIME_LOG_DEBUG_IMU_MS 1000
-#define TIME_LOG_DEBUG_STATE_MS 1000
-
 // WATCHDOG CONFIG
 #define TIME_WATCHDOG_MS 1000   //1s
 
 //IMU CONFIG
 #define IMU_USE_DEBUG true
-#define TIME_IMU_UPDATE_MS 10                   //100Hz (Internal update rate)
+#define TIME_IMU_UPDATE_MS 20                   //50Hz (Internal update rate)
 #define IMU_INIT_RETRIES 5
 
 // MOTOR CONFIG
@@ -90,4 +84,9 @@
 
 // DEBUG CONFIG
 // #define APP_DEBUG_ENABLED                 // Enable debug messages
+// LOG DEBUG FOR PUBLISH
+#define TIME_LOG_DEBUG_ENCODER_MS 1000
+#define TIME_LOG_DEBUG_IMU_MS 1000
+#define TIME_LOG_DEBUG_STATE_MS 1000
+
 // #define APP_DISABLE_SERIAL_ROS_PUBLISHERS // DISABLE SERIAL ROS PUBLISHERS ONLY FOR DEVELOPMENT!!!!!!!
