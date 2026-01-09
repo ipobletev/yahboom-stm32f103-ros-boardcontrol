@@ -3,7 +3,7 @@
 
 // ROS PUBLISH TIME CONFIG
 #define TIME_ENCODER_PUBLISH_MS         100              //10Hz    
-#define TIME_IMU_PUBLISH_MS             20               //50Hz
+#define TIME_IMU_PUBLISH_MS             50               //20Hz
 #define TIME_MACHINE_INFO_PUBLISH_MS    250              //4Hz
 // WATCHDOG CONFIG
 #define TIME_WATCHDOG_MS 1000   //1s

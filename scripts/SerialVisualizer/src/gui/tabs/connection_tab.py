@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QGroupBox, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QGroupBox, QLabel, QPushButton
 import pyqtgraph as pg
 import numpy as np
 import time
@@ -86,6 +86,24 @@ class ConnectionTab(QWidget):
             stats_layout.addWidget(self.lbl_stats[tid]["status"], i, 6)
             
         layout.addWidget(stats_group)
+        
+        # Clean Button
+        self.btn_clear = QPushButton("Clean Data")
+        self.btn_clear.clicked.connect(self.clear_data)
+        self.btn_clear.setFixedHeight(40)
+        self.btn_clear.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                font-weight: bold;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #d32f2f;
+            }
+        """)
+        layout.addWidget(self.btn_clear)
+        
         layout.addStretch()
 
     def update_frame(self, topic_id):
@@ -143,6 +161,19 @@ class ConnectionTab(QWidget):
             self.last_frame_time[tid] = 0
             # self.curves[tid].setData(self.freq_data[tid])
             # self.inst_curves[tid].setData(self.inst_freq_data[tid])
+            self.lbl_stats[tid]["avg"].setText("0.00 Hz")
+            self.lbl_stats[tid]["jit"].setText("0 Hz")
+            self.lbl_stats[tid]["status"].setText("Offline")
+            self.lbl_stats[tid]["status"].setStyleSheet("color: gray;")
+
+    def clear_data(self):
+        """Resets all frequency buffers and clears the plots."""
+        for tid in [0x01, 0x02, 0x03]:
+            self.freq_data[tid].fill(0)
+            self.inst_freq_data[tid].fill(0)
+            self.last_frame_time[tid] = 0
+            self.curves[tid].setData(self.freq_data[tid])
+            self.inst_curves[tid].setData(self.inst_freq_data[tid])
             self.lbl_stats[tid]["avg"].setText("0.00 Hz")
             self.lbl_stats[tid]["jit"].setText("0 Hz")
             self.lbl_stats[tid]["status"].setText("Offline")
