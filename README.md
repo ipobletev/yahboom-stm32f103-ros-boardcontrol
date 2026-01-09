@@ -1,8 +1,10 @@
 # STM32F103 ROS Board Control
 
-![Yahboom Board](docs/media/board.png)
+This project implements the firmware for a Yahboom control board based on the STM32F103 to made a ROS-compatible robot controller. 
 
-This project implements the firmware for a Yahboom control board based on the STM32F103, designed for ROS-compatible robots. It includes a Python-based Graphical User Interface (GUI) for real-time monitoring and control.
+The system uses a binary Serial UART protocol for communication between the PC and the microcontroller, required a Serial ROS node to be running on the PC to receive and decode the data. It includes a Python-based Graphical User Interface (GUI) for real-time monitoring and control that can be used to send commands to the board and view the telemetry data. 
+
+![Yahboom Board](docs/media/board.png)
 
 https://www.yahboom.net/study/ROS-Driver-Board
 
@@ -10,24 +12,25 @@ https://www.yahboom.net/study/ROS-Driver-Board
 ## 🚀 Key Features
 
 ### Firmware (STM32)
-- **RTOS Powered**: Built on **FreeRTOS** (CMSIS-RTOS2) for deterministic task scheduling.
-- **Motor Control**: Support for 4 DC motors with per-motor **PID speed control** and quadrature encoder feedback.
-- **Sensor Fusion**: Real-time reading of **ICM20948** (Accel/Gyro) and **AK09916** (Mag) with tilt compensation (Roll/Pitch calculation).
-- **Hardare Monitoring**: Integrated **ADC monitoring** for battery voltage and system temperature.
-- **SerialROS Protocol**: Binary protocol with **XOR Checksum** for low-latency, reliable PC-Board communication.
-- **Performance Optimized**: Uses **DMA (Direct Memory Access)** for serial reception to minimize CPU overhead.
+- **Layered Architecture**: Organized into **App** (logic) and **BSP** (hardware) layers for maximum modularity and portability.
+- **RTOS Powered**: Built on **FreeRTOS** (CMSIS-RTOS2) for deterministic task scheduling and real-time responsiveness.
+- **Advanced Motor Control**: Direct control of 4 DC motors with per-motor **PID speed control**, encoder feedback, and kinematics processing.
+- **Sensor Fusion & Orientation**: Real-time processing for **ICM20948** (Accel/Gyro) and **AK09916** (Mag) with tilt compensation (Roll/Pitch/Yaw).
+- **Persistent Storage**: Save/Load PID gains and system configurations to **Flash Memory** (simulating EEPROM) via a custom Storage layer.
+- **SerialROS Protocol**: Low-latency binary protocol with **XOR Checksum** for robust PC-Microcontroller communication.
+- **Performance Optimized**: Uses **DMA (Direct Memory Access)** for UART communication to minimize CPU load.
 - **Safety First**:
-  - Multi-state machine (**IDLE, MOVING, EMERGENCY_STOP**).
-  - **Hardware Watchdog** (IWDG) to prevent system freezes.
-  - **Command Timeouts**: Automatic stop if the control signal is lost.
-  - **Hardware Error Hooks**: Immediate E-STOP on sensor or motor driver failure.
-- **User Interface**: Integrated support for status **LEDs**, **Buzzer** alerts, and user **Keys**.
+  - Integrated **System Watchdog (IWDG)** for fail-safe operation.
+  - **Command Timeouts**: Automatic emergency stop if communication with the PC is lost.
+  - **Hardware Error Hooks**: Real-time monitoring of battery voltage and sensor health.
+- **User Interface**: Support for status **LEDs**, **Buzzer** alerts, and user **Keys** with debouncing.
 
 ### Visualization GUI (Python)
-- **Real-Time Dashboard**: Visualization of telemetry (acceleration, angular velocity, encoders).
-- **3D Viewer**: Visual representation of the robot's orientation.
-- **Remote Control**: Sending `cmd_vel` commands, mode switching, and emergency stop.
-- **Data Logging**: Telemetry export to CSV files for later analysis.
+- **Modular Design**: Modern Python architecture using **PyQt6** for a responsive and clean user interface.
+- **Real-Time Instrumentation**: Dashboard for telemetry visualization, including battery, temperature, and motion status.
+- **3D Orientation Viewer**: Real-time representation of the robot's spatial orientation using IMU data.
+- **Advanced Control**: Full control over robot modes (Manual/Auto), velocity commands, and emergency stop.
+- **Dynamic Configuration**: Modify PID parameters and system settings on-the-fly via the serial link.
 
 ### GUI Gallery
 | Dashboard & 3D | Raw Data & Control |
@@ -39,19 +42,25 @@ https://www.yahboom.net/study/ROS-Driver-Board
 ## 📂 Project Structure
 
 ```text
-├── App/                    # Application layer firmware
-│   ├── Main/               # Core logic: task management and state machine
-│   ├── SerialROS/          # SerialROS protocol implementation
-│   ├── Imu/                # IMU sensor abstraction and data processing
-│   ├── Motor/              # Motor driver and encoder integration
-│   ├── PID/                # Generic PID control algorithm
-│   ├── IO/                 # Hardware peripherals (LED, Key, Buzzer)
-│   ├── Watchdog/           # System health monitoring (IWDG)
-│   └── Debug/              # Unified logging and debug utilities
-├── Core/                   # Low-level hardware initialization (CubeMX generated)
-│   ├── Src/                # Main loop and interrupt handlers
-│   └── Inc/                # System-wide hardware headers
-├── Drivers/                # STM32 HAL and CMSIS drivers
+├── App/                    # Application layer firmware (High-level logic)
+│   ├── Main/               # System manager, FSM, and task control
+│   ├── Motor/              # Kinematics and speed processing
+│   ├── Imu/                # Orientation and tilt algorithms
+│   ├── SerialROS/          # Protocol state machine and serialization
+│   ├── Storage/            # Persistent settings management
+│   ├── Watchdog/           # Independent Watchdog (IWDG) management
+│   ├── IO/                 # User interface (Buzzer, Key, Led)
+│   ├── Debug/              # Logging and debug utilities
+│   └── PID/                # Generic PID control implementation
+├── Core/                   # Hardware initialization (STM32CubeMX generated)
+├── Drivers/
+│   ├── BSP/                # Board Support Package (Hardware Abstraction)
+│   │   ├── motor/          # PWM and Encoder drivers
+│   │   ├── imu/            # I2C sensor communications
+│   │   ├── storage/        # Flash R/W operations
+│   │   └── ...             # Drivers for LED, Key, Buzzer, ADC, etc.
+│   ├── STM32F1xx_HAL/      # ST Hardware Abstraction Layer
+│   └── CMSIS/              # ARM Cortex-M Core definitions (STM32CubeMX generated)
 ├── scripts/
 │   └── SerialVisualizer/   # Python-based diagnostic and control GUI
 │       ├── src/            # GUI source code
@@ -62,12 +71,14 @@ https://www.yahboom.net/study/ROS-Driver-Board
 └── yahboom-stm32f103-ros-boardcontrol.ioc # CubeMX configuration file
 ```
 
+---
+
 ## 🛠️ Quick Start
 
 ### Firmware
-1. The project is made with Visual Studio Code and STM32CubeMX, using STM32Cube extensions.
+1. The project is developed using Visual Studio Code and STM32CubeMX with STM32Cube extensions.
 2. Compile and flash the firmware onto the Yahboom STM32F103 board.
-3. The board will start broadcasting data through the main serial port.
+3. The board will start broadcasting telemetry data through the main serial port.
 
 ### Graphical Interface (GUI)
 The GUI is located in the `scripts/SerialVisualizer` folder.
@@ -86,7 +97,8 @@ chmod +x ./scripts/SerialVisualizer/launch.sh
 
 ## 📡 Communication Protocol (SerialROS)
 
-The system uses a binary frame format:
+The system uses a binary frame format (More details in the [serial_topics.md](docs/serial_topics.md) document):
+
 - **Header**: `0xAA 0x55`
 - **Topic ID**: Identifier for the data type (IMU, Encoders, CmdVel, etc.)
 - **Payload**: Topic-specific data.
@@ -103,3 +115,4 @@ The system uses a binary frame format:
 
 ## ⚖️ License
 This project is under the MIT License. See the [LICENSE](LICENSE) file for details.
+
