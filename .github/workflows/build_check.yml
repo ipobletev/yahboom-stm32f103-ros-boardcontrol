@@ -26,6 +26,21 @@ jobs:
     - name: Build
       run: cmake --build --preset Release
 
+    - name: Size Analysis
+      run: |
+        arm-none-eabi-size build/Release/*.elf
+
+    - name: Install Cppcheck
+      run: sudo apt-get install -y cppcheck
+
+    - name: Run Cppcheck
+      run: |
+        cppcheck --enable=all --suppress=missingIncludeSystem --inline-suppr --error-exitcode=1 App Core Drivers/BSP
+
+    - name: Check Formatting
+      run: |
+        find App Core Drivers/BSP -iname *.h -o -iname *.c | xargs clang-format --dry-run --Werror
+
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
