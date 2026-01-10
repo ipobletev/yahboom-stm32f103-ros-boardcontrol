@@ -1,24 +1,18 @@
-# Yahboom STM32 Serial Visualizer
+# STM32 Serial Visualizer
 
 ![Main Dashboard](../../docs/media/gui1.png)
 
 This is a real-time visualizer based on Python and Qt for monitoring and controlling the Yahboom STM32F103 board via the `SerialROS` protocol.
 
-## 🖼️ Gallery
-
-````carousel
-![Raw Data Tab](../../docs/media/gui1.png)
-<!-- slide -->
-![Graphs Tab](../../docs/media/gui2.png)
-<!-- slide -->
-![System Status Tab](../../docs/media/gui3.png)
-<!-- slide -->
-![3D Orientation Tab](../../docs/media/gui4.png)
-<!-- slide -->
-![PID Tuning Tab](../../docs/media/gui5.png)
-<!-- slide -->
-![Connection Frequency Tab](../../docs/media/gui6.png)
-````
+### GUI Gallery
+|  |  |
+|---|---|
+| Dashboard Raw Data | IMU Data |
+| ![GUI 1](../../docs/media/gui1.png) | ![GUI 2](../../docs/media/gui2.png) |
+| System Status | 3D Orientation |
+| ![GUI 3](../../docs/media/gui3.png) | ![GUI 4](../../docs/media/gui4.png) |
+| PID Control | Connection Frequency |
+| ![GUI 5](../../docs/media/gui5.png) | ![GUI 6](../../docs/media/gui6.png) |
 
 ## 🚀 Quick Start
 
